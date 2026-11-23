@@ -36,6 +36,11 @@ on:
         required: false
         type: boolean
         default: false
+      build_cli:
+        description: "Also build standalone t3 CLI archives (optional; desktop DMG/installer does not require it)"
+        required: false
+        type: boolean
+        default: false
       launch_check:
         description: "Run packaged app smoke launch check (optional; unsigned macOS DMGs may hit Gatekeeper)"
         required: false
@@ -77,6 +82,7 @@ jobs:
       build_mac_x64: ${{ steps.resolve.outputs.build_mac_x64 }}
       build_linux_x64: ${{ steps.resolve.outputs.build_linux_x64 }}
       build_win_x64: ${{ steps.resolve.outputs.build_win_x64 }}
+      build_cli: ${{ steps.resolve.outputs.build_cli }}
       clerk_publishable_key: ${{ steps.resolve.outputs.clerk_publishable_key }}
       clerk_jwt_template: ${{ steps.resolve.outputs.clerk_jwt_template }}
       clerk_cli_oauth_client_id: ${{ steps.resolve.outputs.clerk_cli_oauth_client_id }}
@@ -101,6 +107,7 @@ jobs:
           INPUT_BUILD_MAC_X64: ${{ inputs.build_mac_x64 }}
           INPUT_BUILD_LINUX_X64: ${{ inputs.build_linux_x64 }}
           INPUT_BUILD_WIN_X64: ${{ inputs.build_win_x64 }}
+          INPUT_BUILD_CLI: ${{ inputs.build_cli }}
           INPUT_LAUNCH_CHECK: ${{ inputs.launch_check }}
           INPUT_DRAFT: ${{ inputs.draft }}
           VAR_CLERK_PUBLISHABLE_KEY: ${{ vars.T3CODE_CLERK_PUBLISHABLE_KEY }}
@@ -120,6 +127,7 @@ jobs:
             build_mac_x64="false"
             build_linux_x64="false"
             build_win_x64="false"
+            build_cli="false"
             launch_check="false"
             draft="false"
           else
@@ -142,6 +150,7 @@ jobs:
             build_mac_x64="${INPUT_BUILD_MAC_X64:-false}"
             build_linux_x64="${INPUT_BUILD_LINUX_X64:-false}"
             build_win_x64="${INPUT_BUILD_WIN_X64:-false}"
+            build_cli="${INPUT_BUILD_CLI:-false}"
             launch_check="${INPUT_LAUNCH_CHECK:-false}"
             draft="${INPUT_DRAFT:-false}"
           fi
@@ -208,6 +217,7 @@ jobs:
             echo "build_mac_x64=${build_mac_x64}"
             echo "build_linux_x64=${build_linux_x64}"
             echo "build_win_x64=${build_win_x64}"
+            echo "build_cli=${build_cli}"
             echo "clerk_publishable_key=${clerk_publishable_key}"
             echo "clerk_jwt_template=${clerk_jwt_template}"
             echo "clerk_cli_oauth_client_id=${clerk_cli_oauth_client_id}"
@@ -306,7 +316,7 @@ jobs:
       arch: arm64
       rust_target: aarch64-apple-darwin
       resource_key: darwin-arm64
-      cli_archive: true
+      cli_archive: ${{ needs.preflight.outputs.build_cli == 'true' }}
       launch_check: ${{ needs.preflight.outputs.launch_check == 'true' }}
       save_pnpm_store: ${{ needs.preflight.outputs.build_mac_x64 != 'true' }}
 
@@ -360,7 +370,7 @@ jobs:
       arch: x64
       rust_target: x86_64-unknown-linux-gnu
       resource_key: linux-x64
-      cli_archive: true
+      cli_archive: ${{ needs.preflight.outputs.build_cli == 'true' || needs.preflight.outputs.build_win_x64 == 'true' }}
       launch_check: ${{ needs.preflight.outputs.launch_check == 'true' }}
 
   desktop_win_x64:
@@ -387,7 +397,7 @@ jobs:
       arch: x64
       rust_target: x86_64-pc-windows-msvc
       resource_key: win32-x64
-      cli_archive: true
+      cli_archive: ${{ needs.preflight.outputs.build_cli == 'true' }}
 
   publish:
     name: Publish release
