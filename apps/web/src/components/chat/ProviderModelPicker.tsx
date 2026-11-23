@@ -156,6 +156,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
   const isCoarsePointer = useMediaQuery({ pointer: "coarse" });
   const size = props.size ?? "sm";
   const docked = props.effortColumn !== undefined;
+  const hasFooter = props.footer !== undefined;
 
   const activeEntry =
     props.instanceEntries.find((entry) => entry.instanceId === props.activeInstanceId) ?? null;
@@ -213,13 +214,15 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
     return row != null;
   };
   const openTarget = (target: "effort" | "permissions") => {
-    if (target === "effort") {
+    if (target === "effort" && docked) {
       focusEffort("any");
       return;
     }
-    popupRef.current
-      ?.querySelector<HTMLButtonElement>("[data-composer-permissions-trigger]")
-      ?.click();
+    if (target === "permissions") {
+      popupRef.current
+        ?.querySelector<HTMLButtonElement>("[data-composer-permissions-trigger]")
+        ?.click();
+    }
   };
 
   const handleInstanceModelChange = (instanceId: ProviderInstanceId, model: string) => {
@@ -319,10 +322,9 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
           : (props.getModelDisabledReason?.(instanceId, model) ?? null)
       }
       onInstanceModelChange={handleInstanceModelChange}
-      {...(docked
+      {...(docked || hasFooter
         ? {
-            docked,
-            onFocusEffort: () => void focusEffort("any"),
+            ...(docked ? { docked, onFocusEffort: () => void focusEffort("any") } : {}),
             // Inside the fixed height, so switching to or from a ChatGPT plan never resizes it.
             ...(props.selectedModels === undefined
               ? { listFooter: <ChatGptSharingControl provider={activeEntry?.snapshot ?? null} /> }
@@ -344,7 +346,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
       }}
       onOpenChangeComplete={(open) => {
         const target = takeOpenTarget(triggerRef.current);
-        if (open && docked && target) openTarget(target);
+        if (open && (docked || hasFooter) && target) openTarget(target);
       }}
     >
       <PopoverTrigger
@@ -361,7 +363,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
             data-chat-provider-model-picker="true"
             data-composer-shortcut={props.triggerShortcuts}
             onClick={(event) => {
-              if (!isMenuOpen || !docked) return;
+              if (!isMenuOpen || (!docked && !hasFooter)) return;
               const target = takeOpenTarget(triggerRef.current);
               if (!target) return;
               // A shortcut aimed at the open picker moves within it instead of closing it.
@@ -462,7 +464,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
         align={props.popupAlign ?? "start"}
         // Docked, the popup opens above the composer and slides over it when that space is short,
         // so a short window gets its full height (Floating UI sizes to the viewport) instead of a sliver.
-        {...(docked
+        {...(docked || hasFooter
           ? { side: "top" as const, collisionAvoidance: { side: "shift", align: "shift" } as const }
           : {})}
         className="before:hidden"
@@ -493,10 +495,15 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
               {props.footer}
             </div>
           </DockedPickerContext>
+        ) : props.footer ? (
+          <div className="flex max-h-(--available-height) flex-col">
+            {picker}
+            {props.footer}
+          </div>
         ) : (
           picker
         )}
-        {props.selectedModels === undefined && !docked ? (
+        {props.selectedModels === undefined && !docked && !hasFooter ? (
           <ChatGptSharingControl provider={activeEntry?.snapshot ?? null} />
         ) : null}
       </PopoverPopup>

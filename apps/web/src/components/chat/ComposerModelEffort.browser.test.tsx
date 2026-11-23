@@ -9,8 +9,15 @@ import { useState } from "react";
 import { expect, it } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 
-import { render } from "../../../test/render";
-import { ComposerEffortColumn, describeComposerEffort } from "./ComposerModelEffort";
+import "~/index.css";
+
+import { act, render } from "../../../test/render";
+import {
+  ComposerEffortColumn,
+  ComposerEffortPopover,
+  ComposerPickerFooter,
+  describeComposerEffort,
+} from "./ComposerModelEffort";
 import type { TraitsSelectionInput } from "./TraitsPicker";
 
 // Shaped like Devin over ACP: its session mode comes first, and its reasoning id is its own.
@@ -145,4 +152,226 @@ it("focuses a reasoning level by its first letter without selecting it", async (
   await expect
     .element(screen.getByRole("radio", { name: "High" }))
     .toHaveAttribute("aria-checked", "true");
+});
+
+const thinkingModels: ReadonlyArray<ServerProviderModel> = [
+  {
+    slug: "orchestrator-neon",
+    name: "Orchestrator (Neon)",
+    isCustom: false,
+    capabilities: createModelCapabilities({
+      optionDescriptors: [
+        {
+          id: "thinking_level",
+          label: "Thinking Level",
+          type: "select",
+          role: "reasoning",
+          currentValue: "medium",
+          promptInjectedValues: ["ultrathink"],
+          options: [
+            { id: "low", label: "Low" },
+            { id: "medium", label: "Medium" },
+            { id: "high", label: "High" },
+            { id: "extra", label: "Extra" },
+            { id: "ultrathink", label: "Ultrathink" },
+          ],
+        },
+        {
+          id: "cyber_access",
+          label: "Cyber Access",
+          type: "select",
+          currentValue: "standard",
+          options: [
+            { id: "standard", label: "Standard" },
+            { id: "extended", label: "Extended" },
+          ],
+        },
+      ],
+    }),
+  },
+];
+
+function ThinkingSliderColumn(props: { promptUltrathink?: "none" | "body" }) {
+  const [options, setOptions] = useState<ReadonlyArray<ProviderOptionSelection>>([]);
+  const traits: TraitsSelectionInput = {
+    provider: ProviderDriverKind.make("antigravity"),
+    instanceId: ProviderInstanceId.make("antigravity"),
+    models: thinkingModels,
+    model: "orchestrator-neon",
+    ...(props.promptUltrathink ? { promptUltrathink: props.promptUltrathink } : {}),
+    modelOptions: options,
+    onModelOptionsChange: (next) => setOptions(next ?? []),
+  };
+  return (
+    <div data-model-picker-effort className="w-96">
+      <ComposerEffortColumn traits={traits} />
+    </div>
+  );
+}
+
+function ThinkingPopoverHarness() {
+  const [options, setOptions] = useState<ReadonlyArray<ProviderOptionSelection>>([]);
+  const traits: TraitsSelectionInput = {
+    provider: ProviderDriverKind.make("antigravity"),
+    instanceId: ProviderInstanceId.make("antigravity"),
+    models: thinkingModels,
+    model: "orchestrator-neon",
+    modelOptions: options,
+    onModelOptionsChange: (next) => setOptions(next ?? []),
+  };
+  return (
+    <div className="flex flex-col gap-3">
+      <ComposerEffortPopover traits={traits} effortDisplay="label" />
+      <ComposerPickerFooter
+        traits={traits}
+        runtimeMode="full-access"
+        runtimeModeOptions={[]}
+        onRuntimeModeChange={() => {}}
+      />
+    </div>
+  );
+}
+
+it("updates cosmic tier during horizontal drag and commits on release", async () => {
+  await using screen = await render(<ThinkingSliderColumn />, { router: false }); // no routes involved
+  const chamber = screen.container.querySelector<HTMLElement>(".cosmic-effort-chamber")!;
+  const backdropCanvas = chamber.querySelector<HTMLCanvasElement>("[data-cosmic-backdrop] canvas")!;
+  expect(backdropCanvas).not.toBeNull();
+  expect(backdropCanvas.width).toBeGreaterThan(0);
+  expect(backdropCanvas.height).toBeGreaterThan(0);
+  const track = screen.getByRole("slider", { name: "Thinking Level" });
+  expect(chamber).toHaveAttribute("data-cosmic-tier", "2");
+  await expect.element(track).toHaveAttribute("aria-orientation", "horizontal");
+  await expect.element(track).toHaveAttribute("aria-valuetext", "Medium");
+
+  const trackEl = track.element();
+  const rect = trackEl.getBoundingClientRect();
+  const centerY = rect.top + rect.height / 2;
+  const leftX = rect.left + rect.width * 0.125;
+  const rightX = rect.left + rect.width * 0.875;
+
+  await act(() => {
+    trackEl.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        pointerId: 1,
+        button: 0,
+        clientX: leftX,
+        clientY: centerY,
+        bubbles: true,
+      }),
+    );
+  });
+  await expect.element(chamber).toHaveAttribute("data-cosmic-tier", "1");
+  expect(chamber).not.toHaveAttribute("data-dragging");
+  await expect
+    .element(screen.getByRole("radio", { name: "Medium" }))
+    .toHaveAttribute("aria-checked", "true");
+
+  await act(() => {
+    window.dispatchEvent(
+      new PointerEvent("pointermove", {
+        pointerId: 1,
+        clientX: rightX,
+        clientY: centerY,
+        bubbles: true,
+      }),
+    );
+  });
+  await expect.element(chamber).toHaveAttribute("data-dragging", "");
+  await expect.element(chamber).toHaveAttribute("data-cosmic-tier", "4");
+
+  await act(() => {
+    window.dispatchEvent(
+      new PointerEvent("pointerup", {
+        pointerId: 1,
+        clientX: rightX,
+        clientY: centerY,
+        bubbles: true,
+      }),
+    );
+  });
+  await expect
+    .element(screen.getByRole("radio", { name: "Extra" }))
+    .toHaveAttribute("aria-checked", "true");
+  expect(chamber).toHaveAttribute("data-cosmic-tier", "4");
+  expect(chamber).not.toHaveAttribute("data-dragging");
+
+  const indicator = chamber.querySelector<HTMLElement>(".cosmic-option-indicator")!;
+  expect(indicator).not.toBeNull();
+  expect(indicator.style.transform).toMatch(/^translate3d\(300%, 0(?:px)?, 0(?:px)?\)$/);
+
+  await userEvent.click(screen.getByRole("radio", { name: "Low" }));
+  await expect
+    .element(screen.getByRole("radio", { name: "Low" }))
+    .toHaveAttribute("aria-checked", "true");
+  expect(chamber).toHaveAttribute("data-cosmic-tier", "1");
+  expect(indicator.style.transform).toMatch(/^translate3d\(0(?:%|px)?, 0(?:px)?, 0(?:px)?\)$/);
+
+  await userEvent.keyboard("{ArrowRight}{ArrowRight}{Enter}");
+  await expect
+    .element(screen.getByRole("radio", { name: "High" }))
+    .toHaveAttribute("aria-checked", "true");
+  expect(chamber).toHaveAttribute("data-cosmic-tier", "3");
+});
+
+it("locks dragging and shows tier 4 when ultrathink is in the prompt body", async () => {
+  await using screen = await render(<ThinkingSliderColumn promptUltrathink="body" />, {
+    router: false,
+  }); // no routes involved
+  const chamber = screen.container.querySelector<HTMLElement>(".cosmic-effort-chamber")!;
+  const track = screen.getByRole("slider", { name: "Thinking Level" });
+  expect(chamber).toHaveAttribute("data-cosmic-tier", "4");
+  await expect.element(track).toHaveAttribute("aria-disabled", "true");
+
+  const trackEl = track.element();
+  const rect = trackEl.getBoundingClientRect();
+  await act(() => {
+    trackEl.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        pointerId: 2,
+        button: 0,
+        clientX: rect.left + rect.width * 0.125,
+        clientY: rect.top + rect.height / 2,
+        bubbles: true,
+      }),
+    );
+  });
+  await act(() => {
+    window.dispatchEvent(
+      new PointerEvent("pointerup", {
+        pointerId: 2,
+        clientX: rect.left + rect.width * 0.125,
+        clientY: rect.top + rect.height / 2,
+        bubbles: true,
+      }),
+    );
+  });
+  expect(chamber).toHaveAttribute("data-cosmic-tier", "4");
+  await expect.element(screen.getByRole("radio", { name: "Low" })).toBeDisabled();
+});
+
+it("opens standalone thinking capsule without header or extra options, and moves extra options to footer", async () => {
+  await using screen = await render(<ThinkingPopoverHarness />, { router: false }); // no routes involved
+  const trigger = screen.getByRole("button", { name: "Thinking Level · Medium" });
+  await expect.element(trigger).toHaveTextContent("Medium");
+
+  await userEvent.click(trigger);
+  await expect.element(page.getByRole("slider", { name: "Thinking Level" })).toBeVisible();
+  const effortPopup = document.querySelector("[data-model-picker-effort]");
+  expect(effortPopup).not.toBeNull();
+  expect(effortPopup?.textContent).not.toContain("Thinking Level");
+  expect(effortPopup?.textContent).not.toContain("Cyber Access");
+
+  await userEvent.click(page.getByRole("radio", { name: "Extra" }));
+  await expect
+    .element(screen.getByRole("button", { name: "Thinking Level · Extra" }))
+    .toHaveTextContent("Extra");
+
+  await userEvent.keyboard("{Escape}");
+  const cyberButton = screen.getByRole("button", { name: "Cyber Access: Standard" });
+  await userEvent.click(cyberButton);
+  await userEvent.click(page.getByRole("menuitemradio", { name: "Extended" }));
+  await expect
+    .element(screen.getByRole("button", { name: "Cyber Access: Extended" }))
+    .toBeInTheDocument();
 });
