@@ -58,7 +58,7 @@ export function UsageModelDialog({
   const providers = [model.provider];
   const presentation = PROVIDER_PRESENTATION[model.provider];
   const costUnknown = isModelCostUnknown(model);
-  const hitRate = cacheHitRate(model);
+  const hitRate = cacheHitRate(model.tokens);
   const perMillion = costPerMillionTokens(model);
   const stats = [
     { label: gt("Cost"), value: costUnknown ? gt("Unpriced") : formatUsd(model.costUsd, locale) },

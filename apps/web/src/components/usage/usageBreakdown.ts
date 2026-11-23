@@ -23,7 +23,12 @@ export function modelShare(model: ModelTotals, metric: "cost" | "tokens"): numbe
 }
 
 /** Returns null without input; cache writes count as misses because input was fully processed. */
-export function cacheHitRate({ tokens }: ModelTotals): number | null {
+export function cacheHitRate(
+  tokens: Pick<
+    UsageTokenTotals,
+    "uncachedInputTokens" | "cachedInputTokens" | "cacheCreationTokens"
+  >,
+): number | null {
   const input = tokens.uncachedInputTokens + tokens.cachedInputTokens + tokens.cacheCreationTokens;
   return input === 0 ? null : tokens.cachedInputTokens / input;
 }
