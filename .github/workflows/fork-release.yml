@@ -3,8 +3,16 @@ name: Fork Release
 on:
   workflow_dispatch:
     inputs:
+      channel:
+        description: "Release channel brand and updater stream (nightly installs as T3 Code (Nightly).app)"
+        required: false
+        type: choice
+        default: nightly
+        options:
+          - nightly
+          - stable
       version:
-        description: "Release version without v prefix (e.g. 0.1.12). Leave blank for <desktopVersion>-fork.<run_number>."
+        description: "Release version without v prefix (e.g. 0.1.12-nightly.20261123.1). Leave blank for auto-generation (<nextPatch>-nightly.<YYYYMMDD>.<run_number> for nightly, <desktopVersion>-fork.<run_number> for stable)."
         required: false
         type: string
         default: ""
@@ -60,6 +68,8 @@ jobs:
       version: ${{ steps.resolve.outputs.version }}
       tag: ${{ steps.resolve.outputs.tag }}
       ref: ${{ steps.resolve.outputs.ref }}
+      release_channel: ${{ steps.resolve.outputs.release_channel }}
+      manifest_channel: ${{ steps.resolve.outputs.manifest_channel }}
       prerelease: ${{ steps.resolve.outputs.prerelease }}
       draft: ${{ steps.resolve.outputs.draft }}
       launch_check: ${{ steps.resolve.outputs.launch_check }}
@@ -85,6 +95,7 @@ jobs:
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
+          INPUT_CHANNEL: ${{ inputs.channel }}
           INPUT_VERSION: ${{ inputs.version }}
           INPUT_BUILD_MAC_ARM64: ${{ inputs.build_mac_arm64 }}
           INPUT_BUILD_MAC_X64: ${{ inputs.build_mac_x64 }}
@@ -100,6 +111,7 @@ jobs:
           set -euo pipefail
 
           base_version="$(node -e "console.log(JSON.parse(require('node:fs').readFileSync('apps/desktop/package.json', 'utf8')).version)")"
+          next_patch_version="$(node -e "const v=JSON.parse(require('node:fs').readFileSync('apps/desktop/package.json','utf8')).version; const [maj,min,pat]=v.split('-')[0].split('.').map(Number); console.log(\`\${maj}.\${min}.\${pat+1}\`);")"
 
           if [[ "$EVENT_NAME" == "push" ]]; then
             tag="$GITHUB_REF_NAME"
@@ -111,10 +123,17 @@ jobs:
             launch_check="false"
             draft="false"
           else
+            channel="${INPUT_CHANNEL:-nightly}"
             raw_input="$(printf '%s' "$INPUT_VERSION" | tr -d '[:space:]')"
             raw_input="${raw_input#v}"
             if [[ -n "$raw_input" ]]; then
+              if [[ "$channel" == "nightly" && ! "$raw_input" =~ -nightly\.[0-9]{8}\.[0-9]+$ ]]; then
+                echo "::error::Nightly channel version must end with -nightly.<YYYYMMDD>.<N> (for example ${next_patch_version}-nightly.$(date -u +%Y%m%d).1), got '$raw_input'."
+                exit 1
+              fi
               version="$raw_input"
+            elif [[ "$channel" == "nightly" ]]; then
+              version="${next_patch_version}-nightly.$(date -u +%Y%m%d).${GITHUB_RUN_NUMBER}"
             else
               version="${base_version}-fork.${GITHUB_RUN_NUMBER}"
             fi
@@ -130,6 +149,14 @@ jobs:
           if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
             echo "::error::Invalid SemVer release version: '$version'"
             exit 1
+          fi
+
+          if [[ "$version" =~ -nightly\.[0-9]{8}\.[0-9]+$ ]]; then
+            release_channel="nightly"
+            manifest_channel="nightly"
+          else
+            release_channel="stable"
+            manifest_channel="latest"
           fi
 
           if [[ "$version" == *-* ]]; then
@@ -172,6 +199,8 @@ jobs:
             echo "version=${version}"
             echo "tag=${tag}"
             echo "ref=${GITHUB_SHA}"
+            echo "release_channel=${release_channel}"
+            echo "manifest_channel=${manifest_channel}"
             echo "prerelease=${prerelease}"
             echo "draft=${draft}"
             echo "launch_check=${launch_check}"
@@ -263,7 +292,7 @@ jobs:
     with:
       version: ${{ needs.preflight.outputs.version }}
       ref: ${{ needs.preflight.outputs.ref }}
-      release_channel: stable
+      release_channel: ${{ needs.preflight.outputs.release_channel }}
       relay_client_tracing: false
       untrusted_bundle: false
       clerk_publishable_key: ${{ needs.preflight.outputs.clerk_publishable_key }}
@@ -290,7 +319,7 @@ jobs:
     with:
       version: ${{ needs.preflight.outputs.version }}
       ref: ${{ needs.preflight.outputs.ref }}
-      release_channel: stable
+      release_channel: ${{ needs.preflight.outputs.release_channel }}
       relay_client_tracing: false
       untrusted_bundle: false
       clerk_publishable_key: ${{ needs.preflight.outputs.clerk_publishable_key }}
@@ -317,7 +346,7 @@ jobs:
     with:
       version: ${{ needs.preflight.outputs.version }}
       ref: ${{ needs.preflight.outputs.ref }}
-      release_channel: stable
+      release_channel: ${{ needs.preflight.outputs.release_channel }}
       relay_client_tracing: false
       untrusted_bundle: false
       clerk_publishable_key: ${{ needs.preflight.outputs.clerk_publishable_key }}
@@ -343,7 +372,7 @@ jobs:
     with:
       version: ${{ needs.preflight.outputs.version }}
       ref: ${{ needs.preflight.outputs.ref }}
-      release_channel: stable
+      release_channel: ${{ needs.preflight.outputs.release_channel }}
       relay_client_tracing: false
       untrusted_bundle: false
       clerk_publishable_key: ${{ needs.preflight.outputs.clerk_publishable_key }}
@@ -410,6 +439,8 @@ jobs:
       - id: check_manifests
         name: Normalize single-arch manifests and write CLI checksums
         shell: bash
+        env:
+          MANIFEST_CHANNEL: ${{ needs.preflight.outputs.manifest_channel }}
         run: |
           set -euo pipefail
           assets_dir="$RUNNER_TEMP/release-assets"
@@ -417,14 +448,14 @@ jobs:
           cd "$assets_dir"
 
           needs_mac_merge="false"
-          if [[ -f latest-mac.yml && -f latest-mac-x64.yml ]]; then
+          if [[ -f "${MANIFEST_CHANNEL}-mac.yml" && -f "${MANIFEST_CHANNEL}-mac-x64.yml" ]]; then
             needs_mac_merge="true"
-          elif [[ -f latest-mac-x64.yml && ! -f latest-mac.yml ]]; then
-            mv latest-mac-x64.yml latest-mac.yml
+          elif [[ -f "${MANIFEST_CHANNEL}-mac-x64.yml" && ! -f "${MANIFEST_CHANNEL}-mac.yml" ]]; then
+            mv "${MANIFEST_CHANNEL}-mac-x64.yml" "${MANIFEST_CHANNEL}-mac.yml"
           fi
 
-          if [[ -f latest-win-x64.yml && ! -f latest.yml ]]; then
-            mv latest-win-x64.yml latest.yml
+          if [[ -f "${MANIFEST_CHANNEL}-win-x64.yml" && ! -f "${MANIFEST_CHANNEL}.yml" ]]; then
+            mv "${MANIFEST_CHANNEL}-win-x64.yml" "${MANIFEST_CHANNEL}.yml"
           fi
 
           shopt -s nullglob
@@ -465,15 +496,19 @@ jobs:
 
       - name: Merge dual-arch macOS updater manifests
         if: steps.check_manifests.outputs.needs_mac_merge == 'true'
+        env:
+          MANIFEST_CHANNEL: ${{ needs.preflight.outputs.manifest_channel }}
         run: |
           node scripts/merge-update-manifests.ts --platform mac \
-            "$RUNNER_TEMP/release-assets/latest-mac.yml" \
-            "$RUNNER_TEMP/release-assets/latest-mac-x64.yml"
-          rm -f "$RUNNER_TEMP/release-assets/latest-mac-x64.yml"
+            "$RUNNER_TEMP/release-assets/${MANIFEST_CHANNEL}-mac.yml" \
+            "$RUNNER_TEMP/release-assets/${MANIFEST_CHANNEL}-mac-x64.yml"
+          rm -f "$RUNNER_TEMP/release-assets/${MANIFEST_CHANNEL}-mac-x64.yml"
 
       - id: release_files
         name: Resolve release asset list
         shell: bash
+        env:
+          MANIFEST_CHANNEL: ${{ needs.preflight.outputs.manifest_channel }}
         run: |
           set -euo pipefail
           assets_dir="$RUNNER_TEMP/release-assets"
@@ -487,9 +522,9 @@ jobs:
             "$assets_dir"/*.exe \
             "$assets_dir"/*.tar.gz \
             "$assets_dir"/*.blockmap \
-            "$assets_dir"/latest*.yml \
+            "$assets_dir"/"${MANIFEST_CHANNEL}"*.yml \
             "$assets_dir"/SHA256SUMS; do
-            if [[ -f "$path" ]]; then
+            if [[ -f "$path" && "$(basename "$path")" != "builder-debug.yml" ]]; then
               files+=("$path")
             fi
           done
