@@ -115,8 +115,10 @@ import {
   useComposerThreadDraft,
 } from "../../composerDraftStore";
 import { buildDraftThreadRouteParams, buildThreadRouteParams } from "../../threadRoutes";
+import { selectActiveProcessingRunId } from "@t3tools/client-runtime/state/live-tps";
 import { ComposerStashBadge } from "./ComposerStashBadge";
 import { ComposerStashMenu } from "./ComposerStashMenu";
+import { ComposerTpsBadge } from "./ComposerTpsBadge";
 import { useComposerTriggerState } from "./useComposerTriggerState";
 import { useComposerMenuItems } from "./useComposerMenuItems";
 import { useComposerMultilinePrompt } from "./useComposerMultilinePrompt";
@@ -3618,6 +3620,8 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
   const composerAttachButton = showComposerAttachAction ? (
     <ComposerAttachButton onOpenPicker={() => composerAttachInputRef.current?.click()} />
   ) : null;
+  const activeProcessingRunId =
+    routeKind === "server" ? selectActiveProcessingRunId(activeThreadRuns) : null;
   return (
     <form
       ref={composerFormRef}
@@ -3678,10 +3682,11 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
         if (isInsideRestingComposerControlScope(event.target)) return;
         composerMentionDragHandlers.onDrop(event);
       }}
-      className="mx-auto w-full min-w-0 max-w-(--chat-content-max-width)"
+      className="relative mx-auto w-full min-w-0 max-w-(--chat-content-max-width)"
       data-chat-composer-form="true"
       {...threadContextDropTargetProps()}
     >
+      <ComposerTpsBadge threadRef={routeThreadRef} activeRunId={activeProcessingRunId} />
       <ComposerBanner.Dock>
         <ComposerBanner.Column>
           <ComposerBannerStack items={shelfItems} />
