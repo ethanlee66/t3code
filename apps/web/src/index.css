@@ -1100,6 +1100,410 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
       all: revert;
     }
   }
+
+  /* Horizontal obsidian cosmic thinking-depth slider capsule. Backdrop visuals render onto a GPU
+     canvas in CosmicBackdropCanvas.ts; CSS retains chrome, track rail, orb, rim, and option pills. */
+  @keyframes cosmic-rim-spin {
+    from {
+      transform: translate(-50%, -50%) rotate(0deg);
+    }
+    to {
+      transform: translate(-50%, -50%) rotate(360deg);
+    }
+  }
+
+  @keyframes cosmic-orb-pulse {
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 0.84;
+    }
+    50% {
+      transform: scale(1.22);
+      opacity: 1;
+    }
+  }
+
+  .cosmic-effort-chamber {
+    --cosmic-base-top: #04050a;
+    --cosmic-base-bottom: #080a12;
+    --cosmic-outer-glow: rgb(0 0 0 / 0%);
+    --cosmic-beam-glow: rgb(148 163 184 / 24%);
+    --cosmic-orb-core: #e2e8f0;
+    --cosmic-orb-rim: rgb(148 163 184 / 75%);
+    --cosmic-orb-aura: rgb(148 163 184 / 24%);
+    --cosmic-pill-glow: rgb(148 163 184 / 24%);
+    --cosmic-rim-opacity: 0;
+    --cosmic-active-row-bg: rgb(255 255 255 / 10%);
+
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(180deg, var(--cosmic-base-top) 0%, var(--cosmic-base-bottom) 100%);
+    color: #f8fafc;
+    box-shadow:
+      0 22px 48px -14px rgb(0 0 0 / 68%),
+      0 8px 20px -8px rgb(0 0 0 / 48%),
+      0 0 34px -10px var(--cosmic-outer-glow),
+      0 0 0 1px rgb(255 255 255 / 11%),
+      inset 0 1px 0 rgb(255 255 255 / 16%),
+      inset 0 -18px 30px -18px rgb(0 0 0 / 82%);
+    transition:
+      background 280ms ease,
+      box-shadow 280ms ease;
+    user-select: none;
+  }
+
+  /* Tier 0: Quiet obsidian void */
+  .cosmic-effort-chamber[data-cosmic-tier="0"] {
+    --cosmic-base-top: #040509;
+    --cosmic-base-bottom: #080a12;
+    --cosmic-outer-glow: rgb(148 163 184 / 10%);
+    --cosmic-beam-glow: rgb(148 163 184 / 20%);
+    --cosmic-orb-core: #cbd5e1;
+    --cosmic-orb-rim: rgb(148 163 184 / 75%);
+    --cosmic-orb-aura: rgb(100 116 139 / 22%);
+    --cosmic-pill-glow: rgb(148 163 184 / 22%);
+    --cosmic-rim-opacity: 0;
+    --cosmic-active-row-bg: rgb(148 163 184 / 14%);
+  }
+
+  /* Tier 1: Abyssal sapphire & glacial sky aurora curtains */
+  .cosmic-effort-chamber[data-cosmic-tier="1"] {
+    --cosmic-base-top: #03050c;
+    --cosmic-base-bottom: #060b18;
+    --cosmic-outer-glow: rgb(56 189 248 / 22%);
+    --cosmic-beam-glow: rgb(56 189 248 / 45%);
+    --cosmic-orb-core: #e0f2fe;
+    --cosmic-orb-rim: #38bdf8;
+    --cosmic-orb-aura: rgb(56 189 248 / 44%);
+    --cosmic-pill-glow: rgb(56 189 248 / 38%);
+    --cosmic-rim-opacity: 0.22;
+    --cosmic-active-row-bg: rgb(56 189 248 / 15%);
+  }
+
+  /* Tier 2: Cobalt & astral indigo nebula */
+  .cosmic-effort-chamber[data-cosmic-tier="2"] {
+    --cosmic-base-top: #040411;
+    --cosmic-base-bottom: #08091e;
+    --cosmic-outer-glow: rgb(99 102 241 / 28%);
+    --cosmic-beam-glow: rgb(99 102 241 / 48%);
+    --cosmic-orb-core: #eef2ff;
+    --cosmic-orb-rim: #818cf8;
+    --cosmic-orb-aura: rgb(99 102 241 / 48%);
+    --cosmic-pill-glow: rgb(99 102 241 / 42%);
+    --cosmic-rim-opacity: 0.42;
+    --cosmic-active-row-bg: rgb(99 102 241 / 18%);
+  }
+
+  /* Tier 3: Royal violet plasma filaments */
+  .cosmic-effort-chamber[data-cosmic-tier="3"] {
+    --cosmic-base-top: #060312;
+    --cosmic-base-bottom: #0d0620;
+    --cosmic-outer-glow: rgb(139 92 246 / 34%);
+    --cosmic-beam-glow: rgb(139 92 246 / 54%);
+    --cosmic-orb-core: #f5f3ff;
+    --cosmic-orb-rim: #a78bfa;
+    --cosmic-orb-aura: rgb(139 92 246 / 56%);
+    --cosmic-pill-glow: rgb(139 92 246 / 46%);
+    --cosmic-rim-opacity: 0.64;
+    --cosmic-active-row-bg: rgb(139 92 246 / 20%);
+  }
+
+  /* Tier 4: Event-horizon ultraviolet & pearlescent starlight */
+  .cosmic-effort-chamber[data-cosmic-tier="4"] {
+    --cosmic-base-top: #04020b;
+    --cosmic-base-bottom: #090418;
+    --cosmic-outer-glow: rgb(167 139 250 / 38%);
+    --cosmic-beam-glow: rgb(167 139 250 / 58%);
+    --cosmic-orb-core: #ffffff;
+    --cosmic-orb-rim: #ddd6fe;
+    --cosmic-orb-aura: rgb(196 181 253 / 62%);
+    --cosmic-pill-glow: rgb(167 139 250 / 48%);
+    --cosmic-rim-opacity: 0.85;
+    --cosmic-active-row-bg: rgb(196 181 253 / 16%);
+  }
+
+  .cosmic-effort-chamber[data-disabled] {
+    opacity: 0.78;
+  }
+
+  .cosmic-effort-chamber[data-dragging] .cosmic-slider-thumb,
+  .cosmic-effort-chamber[data-dragging] .cosmic-track-fill {
+    transition: none;
+  }
+
+  .cosmic-specular-bezel {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse 68% 20% at 50% 0%,
+      rgb(255 255 255 / 14%) 0%,
+      transparent 72%
+    );
+  }
+
+  .cosmic-iridescent-rim {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    overflow: hidden;
+    pointer-events: none;
+    opacity: var(--cosmic-rim-opacity);
+    transition: opacity 280ms ease;
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+  }
+
+  .cosmic-iridescent-rim::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 150%;
+    aspect-ratio: 1;
+    background: conic-gradient(
+      from 0deg,
+      rgb(99 102 241 / 18%) 0deg,
+      rgb(129 140 248 / 58%) 70deg,
+      rgb(221 214 254 / 86%) 125deg,
+      rgb(168 85 247 / 66%) 185deg,
+      rgb(59 130 246 / 24%) 255deg,
+      rgb(245 243 255 / 72%) 310deg,
+      rgb(99 102 241 / 18%) 360deg
+    );
+    animation: cosmic-rim-spin 12s linear infinite;
+    will-change: transform;
+  }
+
+  .cosmic-locked-pill {
+    background: rgb(255 255 255 / 8%);
+    border: 1px solid rgb(255 255 255 / 14%);
+  }
+
+  .cosmic-track-rail {
+    container-type: inline-size;
+    height: 3px;
+    border-radius: 9999px;
+    background: rgb(255 255 255 / 14%);
+    box-shadow: inset 0 1px 1px rgb(0 0 0 / 55%);
+  }
+
+  .cosmic-track-fill {
+    box-shadow: 0 0 10px var(--cosmic-beam-glow);
+    transition:
+      width 380ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 380ms ease;
+  }
+
+  .cosmic-track-fill-beam {
+    width: 100cqi;
+    background: linear-gradient(
+      90deg,
+      #2563eb 0%,
+      #38bdf8 22%,
+      #6366f1 48%,
+      #8b5cf6 76%,
+      #f5f3ff 100%
+    );
+  }
+
+  .cosmic-effort-chamber[data-cosmic-tier="0"] .cosmic-track-fill-beam {
+    background: linear-gradient(90deg, rgb(100 116 139 / 55%), rgb(203 213 225 / 85%));
+  }
+
+  .cosmic-detent {
+    width: 3px;
+    height: 3px;
+    background: rgb(255 255 255 / 32%);
+  }
+
+  .cosmic-detent-active {
+    width: 4px;
+    height: 4px;
+    background: rgb(255 255 255 / 88%);
+    box-shadow: 0 0 6px var(--cosmic-orb-rim);
+  }
+
+  .cosmic-slider-thumb {
+    transform: translate(-50%, -50%);
+    transition:
+      left 380ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 180ms ease;
+  }
+
+  .cosmic-slider-thumb-halo {
+    background: radial-gradient(circle, var(--cosmic-orb-aura) 0%, transparent 72%);
+    animation: cosmic-orb-pulse 2.4s ease-in-out infinite;
+  }
+
+  .cosmic-slider-thumb-core {
+    background: radial-gradient(
+      circle at 35% 30%,
+      #ffffff 0%,
+      #ffffff 44%,
+      var(--cosmic-orb-core) 82%,
+      var(--cosmic-orb-rim) 100%
+    );
+    border: 1px solid rgb(255 255 255 / 85%);
+    box-shadow:
+      0 0 10px var(--cosmic-orb-aura),
+      0 2px 6px rgb(0 0 0 / 60%);
+    transition:
+      box-shadow 380ms ease,
+      border-color 380ms ease,
+      transform 150ms ease;
+  }
+
+  .cosmic-effort-chamber[data-dragging] .cosmic-slider-thumb-core {
+    transform: scale(1.18);
+  }
+
+  .cosmic-option-indicator {
+    transition: transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+  }
+
+  .cosmic-effort-chamber[data-dragging] .cosmic-option-indicator {
+    transition: transform 140ms ease-out;
+  }
+
+  .cosmic-option-indicator-pill {
+    background: var(--cosmic-active-row-bg);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 20%),
+      0 2px 14px -2px var(--cosmic-pill-glow);
+    transition:
+      background-color 380ms ease,
+      box-shadow 380ms ease;
+  }
+
+  .cosmic-option-idle {
+    color: rgb(255 255 255 / 54%);
+  }
+
+  .cosmic-option-idle:hover,
+  .cosmic-option-idle:focus-visible {
+    color: rgb(255 255 255 / 92%);
+    background: rgb(255 255 255 / 6%);
+  }
+
+  .cosmic-option-selected {
+    text-shadow: 0 0 14px var(--cosmic-pill-glow);
+  }
+
+  .cosmic-trigger-dot {
+    background: var(--muted-foreground);
+    transition:
+      background-color 200ms ease,
+      box-shadow 200ms ease;
+  }
+
+  .cosmic-trigger-dot[data-cosmic-tier="0"] {
+    background: #94a3b8;
+    box-shadow: none;
+  }
+
+  .cosmic-trigger-dot[data-cosmic-tier="1"] {
+    background: #38bdf8;
+    box-shadow: 0 0 6px rgb(56 189 248 / 55%);
+  }
+
+  .cosmic-trigger-dot[data-cosmic-tier="2"] {
+    background: #818cf8;
+    box-shadow: 0 0 6px rgb(129 140 248 / 60%);
+  }
+
+  .cosmic-trigger-dot[data-cosmic-tier="3"] {
+    background: #a855f7;
+    box-shadow: 0 0 7px rgb(168 85 247 / 65%);
+  }
+
+  .cosmic-trigger-dot[data-cosmic-tier="4"] {
+    background: linear-gradient(135deg, #6366f1, #a855f7, #ede9fe);
+    box-shadow: 0 0 8px rgb(167 139 250 / 72%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cosmic-iridescent-rim::before,
+    .cosmic-slider-thumb-halo {
+      animation: none;
+    }
+
+    .cosmic-effort-chamber,
+    .cosmic-iridescent-rim,
+    .cosmic-track-fill,
+    .cosmic-slider-thumb,
+    .cosmic-slider-thumb-core,
+    .cosmic-option-indicator,
+    .cosmic-option-indicator-pill,
+    .cosmic-trigger-dot {
+      transition: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .cosmic-effort-chamber {
+      background: Canvas;
+      color: CanvasText;
+      border: 1px solid CanvasText;
+      box-shadow: none;
+    }
+
+    .cosmic-effort-chamber [data-cosmic-backdrop],
+    .cosmic-option-indicator {
+      display: none;
+    }
+
+    .cosmic-track-rail {
+      background: GrayText;
+      box-shadow: none;
+    }
+
+    .cosmic-track-fill,
+    .cosmic-track-fill-beam,
+    .cosmic-effort-chamber[data-cosmic-tier="0"] .cosmic-track-fill-beam {
+      background: Highlight;
+      box-shadow: none;
+    }
+
+    .cosmic-slider-thumb-core {
+      background: Highlight;
+      border-color: HighlightText;
+      box-shadow: none;
+    }
+
+    .cosmic-option-selected {
+      background: Highlight;
+      color: HighlightText;
+      box-shadow: none;
+      text-shadow: none;
+    }
+  }
+}
+
+/* Remove the outer dropdown-glass frame/clipping so the cosmic capsule floats cleanly as the entire popover. */
+[data-slot="popover-popup"]:has(.cosmic-effort-chamber) {
+  border: 0;
+  border-radius: 1rem;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  overflow: visible;
+}
+
+[data-slot="popover-popup"]:has(.cosmic-effort-chamber) > [data-slot="popover-viewport"] {
+  overflow: visible;
+  border-radius: 1rem;
 }
 
 /* Safe-area inset utilities for surfaces that opt into edge-to-edge rendering.

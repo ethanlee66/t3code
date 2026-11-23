@@ -25,19 +25,19 @@ import { resolveComposerTraitsInput } from "./composerProviderState";
 import { useApplyThreadModelPick } from "./useApplyThreadModelPick";
 import { useStableCallback } from "../../hooks/useStableCallback";
 import {
-  ComposerEffortColumn,
+  ComposerEffortPopover,
   ComposerPickerFooter,
-  describeComposerEffort,
+  describeComposerModelSuffix,
 } from "./ComposerModelEffort";
 import type { useComposerProviderModel } from "./useComposerProviderModel";
 import { resolveComposerControlsOwnership } from "./composerControlsOwnership";
 
 /**
- * The composer footer controls: the model picker (which also holds effort, speed and
- * permissions), mode controls and the overflow menu for blocks that do not fit. Rendered in the
- * expanded footer or the resting controls host.
+ * The composer footer controls: the model picker (with speed, extra model traits and permissions in
+ * its footer), the standalone thinking-depth slider trigger, mode controls and the overflow menu for
+ * blocks that do not fit. Rendered in the expanded footer or the resting controls host.
  */
-// Model and effort share one trigger; it stays filled while its popup is open.
+// Keep the model trigger filled while its popup is open.
 const MODEL_TRIGGER_STATES = "data-popup-open:bg-accent data-popup-open:text-foreground";
 
 export function ComposerControlsBar(props: {
@@ -164,7 +164,13 @@ export function ComposerControlsBar(props: {
     promptUltrathink,
     onPromptEdit,
   });
-  const effort = describeComposerEffort(traitsInput, props.effortDisplay, controlSize, m);
+  const modelSuffix = describeComposerModelSuffix(traitsInput, m);
+  const pickerInstanceId = providerCatalogPending
+    ? (activeThreadModelSelection?.instanceId ?? selectedInstanceId)
+    : selectedInstanceId;
+  const pickerModelSlug = providerCatalogPending
+    ? (activeThreadModelSelection?.model ?? selectedModelForPickerWithCustomFallback)
+    : selectedModelForPickerWithCustomFallback;
   const restingBlockDefs = showModeBlock
     ? [
         {
@@ -198,16 +204,8 @@ export function ComposerControlsBar(props: {
       onMultipleModelSelectionsChange={onMultipleModelSelectionsChange}
       selectedModelSelection={selectedModelSelection}
       onProviderModelSelect={onProviderModelSelect}
-      activeInstanceId={
-        providerCatalogPending
-          ? (activeThreadModelSelection?.instanceId ?? selectedInstanceId)
-          : selectedInstanceId
-      }
-      model={
-        providerCatalogPending
-          ? (activeThreadModelSelection?.model ?? selectedModelForPickerWithCustomFallback)
-          : selectedModelForPickerWithCustomFallback
-      }
+      activeInstanceId={pickerInstanceId}
+      model={pickerModelSlug}
       lockedProvider={lockedProvider}
       lockedContinuationGroupKey={lockedContinuationGroupKey}
       instanceEntries={providerInstanceEntries}
@@ -219,12 +217,9 @@ export function ComposerControlsBar(props: {
         MODEL_TRIGGER_STATES,
         composerControlsCollapsed ? "min-w-13 shrink text-xs!" : "min-w-13",
       )}
-      triggerSuffix={effort.suffix}
-      triggerDetail={effort.detail}
-      triggerShortcuts={
-        pickerOwnsModeShortcut ? "composer.effort composer.mode" : "composer.effort"
-      }
-      effortColumn={<ComposerEffortColumn traits={traitsInput} />}
+      triggerSuffix={modelSuffix.suffix}
+      triggerDetail={modelSuffix.detail}
+      {...(pickerOwnsModeShortcut ? { triggerShortcuts: "composer.mode" } : {})}
       footer={
         <ComposerPickerFooter
           traits={traitsInput}
@@ -266,6 +261,14 @@ export function ComposerControlsBar(props: {
   ) : (
     <>
       {composerModelPicker}
+      <ComposerEffortPopover
+        traits={traitsInput}
+        effortDisplay={props.effortDisplay}
+        size={controlSize}
+        popupAlign={composerControlsCollapsed ? "start" : "end"}
+        disabled={providerCatalogPending || isSendBusy}
+        hidden={composerControlsHidden}
+      />
 
       <>
         {restingBlockDefs.map((def, index) => {
