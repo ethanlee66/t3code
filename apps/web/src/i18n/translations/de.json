@@ -3404,6 +3404,9 @@
     },
     " über eine verknüpfte Umgebung gestartet."
   ],
+  "96e91fa4101cc4b9": "{provider} Wochenlimit: {percent}% übrig",
+  "01d3044ba9f2936e": "{provider} Wochenlimits",
+  "df130193fd8be551": "{percent}% übrig",
   "601807baf4e25b94": "Vorschau von {name}",
   "922a18febd2c86d7": "Bildvorschau",
   "932e6e0577492ff3": "Audio nicht verfügbar",
