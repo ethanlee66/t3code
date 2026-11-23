@@ -3397,6 +3397,9 @@
     },
     " through a linked environment."
   ],
+  "96e91fa4101cc4b9": "{provider} weekly limit: {percent}% left",
+  "01d3044ba9f2936e": "{provider} weekly limits",
+  "df130193fd8be551": "{percent}% left",
   "601807baf4e25b94": "Preview {name}",
   "922a18febd2c86d7": "Preview image",
   "932e6e0577492ff3": "Audio unavailable",

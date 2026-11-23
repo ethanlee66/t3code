@@ -3397,6 +3397,9 @@
     },
     " via en länkad miljö."
   ],
+  "96e91fa4101cc4b9": "Veckogräns för {provider}: {percent}% kvar",
+  "01d3044ba9f2936e": "Veckogränser för {provider}",
+  "df130193fd8be551": "{percent}% kvar",
   "601807baf4e25b94": "Förhandsvisa {name}",
   "922a18febd2c86d7": "Förhandsvisa bild",
   "932e6e0577492ff3": "Ljudet är inte tillgängligt",

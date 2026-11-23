@@ -3397,6 +3397,9 @@
     },
     " por meio de um ambiente vinculado."
   ],
+  "96e91fa4101cc4b9": "Limite semanal do {provider}: {percent}% restante",
+  "01d3044ba9f2936e": "Limites semanais do {provider}",
+  "df130193fd8be551": "{percent}% restante",
   "601807baf4e25b94": "Pré-visualizar {name}",
   "922a18febd2c86d7": "Pré-visualizar imagem",
   "932e6e0577492ff3": "Áudio indisponível",
