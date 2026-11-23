@@ -43,7 +43,7 @@ describe("model rates", () => {
       unpricedTokens: 1_000_000,
     });
 
-    expect(cacheHitRate(mixed)).toBe(0.25);
+    expect(cacheHitRate(mixed.tokens)).toBe(0.25);
     expect(costPerMillionTokens(mixed)).toBe(2);
     expect(costPerMillionTokens({ ...mixed, unpricedRecords: 4 })).toBeNull();
   });

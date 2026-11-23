@@ -83,6 +83,7 @@ import { UsageProviderChart } from "./UsageProviderChart";
 import { SpeedPremium, UsageModelDialog } from "./UsageModelDialog";
 import { UsageShareBar } from "./UsageShareBar";
 import {
+  cacheHitRate,
   costTypeSegments,
   modelShare,
   sortModelsByTokens,
@@ -641,6 +642,8 @@ function UsageOverview({
     PROVIDER_ORDER.filter((provider) => loading.everyProvider || loading.providers.has(provider)),
   );
   const providersWithData = new Set(providersWithUsage(merged.providers));
+  const hitRate = cacheHitRate(merged);
+  const cacheHitRateLabel = hitRate === null ? "–" : formatPercent(hitRate);
   // Only loading.providers excludes hidden providers without data. Filter a fresh array so the compiler can
   // cache independently.
   const activeProviders = [...PROVIDER_ORDER].filter(
@@ -830,7 +833,7 @@ function UsageOverview({
         <h2 className="text-sm font-medium text-foreground">
           <T>Totals</T>
         </h2>
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-4 py-1 md:grid-cols-5">
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-4 py-1 md:grid-cols-3 lg:grid-cols-6">
           <Metric
             loading={loadingPartial}
             label={gt("Processed tokens")}
@@ -846,6 +849,7 @@ function UsageOverview({
             label={gt("Uncached input")}
             value={formatTokens(merged.uncachedInputTokens)}
           />
+          <Metric loading={loadingPartial} label={gt("Cache hit")} value={cacheHitRateLabel} />
           <Metric
             loading={loadingPartial}
             label={gt("Output", { $context: "output tokens" })}
@@ -1425,6 +1429,7 @@ function UsageSkeleton() {
             gt("Processed tokens"),
             gt("Cached input"),
             gt("Uncached input"),
+            gt("Cache hit"),
             gt("Output", { $context: "output tokens" }),
             gt("Cache savings"),
           ]}
@@ -1454,7 +1459,7 @@ function UsageSkeleton() {
 
 function MetricSkeletons({ labels }: { readonly labels: readonly string[] }) {
   return (
-    <div className="grid grid-cols-2 gap-x-6 gap-y-4 py-1 md:grid-cols-5">
+    <div className="grid grid-cols-2 gap-x-6 gap-y-4 py-1 md:grid-cols-3 lg:grid-cols-6">
       {labels.map((label) => (
         <div key={label} className="flex flex-col gap-0.5">
           <span className="text-xs text-muted-foreground">{label}</span>
