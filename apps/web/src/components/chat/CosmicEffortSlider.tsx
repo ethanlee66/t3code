@@ -258,7 +258,7 @@ export function CosmicEffortSlider(props: {
         <div className="cosmic-iridescent-rim" />
       </div>
 
-      <div className="relative z-10 flex flex-col gap-1.5 px-3 pt-4 pb-2.5">
+      <div className="relative z-10 flex flex-col gap-0.5 px-2.5 pt-2 pb-1.5">
         {props.lockedNote ? (
           <div className="cosmic-locked-pill mx-auto mb-0.5 max-w-full truncate rounded-full px-2.5 py-0.5 text-center text-2xs text-white/75">
             {props.lockedNote}
@@ -285,8 +285,9 @@ export function CosmicEffortSlider(props: {
             beginDragSession(event.pointerId, event.clientX, true, event.currentTarget);
           }}
           className={cn(
-            "group/cosmic-track relative h-7 w-full touch-none",
-            props.disabled || count <= 1 ? "cursor-default" : "cursor-ew-resize",
+            "group/cosmic-track relative h-5 w-full touch-none",
+            props.disabled || count <= 1 ? "cursor-default" : "cursor-pointer",
+            isScrubbing && "cursor-grabbing",
           )}
         >
           {count > 1 ? (
@@ -297,11 +298,18 @@ export function CosmicEffortSlider(props: {
                 right: `${firstCenter}%`,
               }}
             >
+              {/* Slides in by transform, with the beam counter-shifted so its gradient stays put;
+                  transforms keep animating while a selection re-renders the composer. */}
               <div
-                className="cosmic-track-fill h-full overflow-hidden rounded-full"
-                style={{ width: `${(profile.progress * 100).toFixed(3)}%` }}
+                className="cosmic-track-fill h-full w-full overflow-hidden rounded-full"
+                style={{ transform: `translateX(${((profile.progress - 1) * 100).toFixed(3)}%)` }}
               >
-                <div className="cosmic-track-fill-beam h-full" />
+                <div
+                  className="cosmic-track-fill-beam h-full"
+                  style={{
+                    transform: `translateX(${((1 - profile.progress) * 100).toFixed(3)}%)`,
+                  }}
+                />
               </div>
             </div>
           ) : null}
@@ -330,11 +338,13 @@ export function CosmicEffortSlider(props: {
           {count > 0 ? (
             <div
               aria-hidden="true"
-              style={{ left: `${thumbPercent.toFixed(3)}%` }}
-              className="cosmic-slider-thumb pointer-events-none absolute top-1/2 size-7"
+              style={{ transform: `translateX(${thumbPercent.toFixed(3)}%)` }}
+              className="cosmic-slider-thumb pointer-events-none absolute inset-0"
             >
-              <div className="cosmic-slider-thumb-halo absolute inset-0 rounded-full" />
-              <div className="cosmic-slider-thumb-core absolute top-1/2 left-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full group-hover/cosmic-track:scale-110" />
+              <div className="absolute top-1/2 left-0 size-5 -translate-x-1/2 -translate-y-1/2">
+                <div className="cosmic-slider-thumb-halo absolute inset-0 rounded-full" />
+                <div className="cosmic-slider-thumb-core absolute top-1/2 left-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full group-hover/cosmic-track:scale-110" />
+              </div>
             </div>
           ) : null}
         </div>
@@ -385,7 +395,7 @@ export function CosmicEffortSlider(props: {
                 props.onSelect(option.id);
               },
               className: cn(
-                "relative z-10 flex h-7 min-w-0 cursor-pointer items-center justify-center rounded-lg text-center tracking-tight outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/75 disabled:cursor-not-allowed disabled:opacity-64",
+                "relative z-10 flex h-6 min-w-0 cursor-pointer items-center justify-center rounded-lg text-center tracking-tight outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/75 disabled:cursor-not-allowed disabled:opacity-64",
                 count >= 5 ? "px-0.5 text-2xs sm:px-1 sm:text-xs" : "px-1 text-xs",
                 visualSelected
                   ? "cosmic-option-selected font-medium text-white"
