@@ -901,7 +901,7 @@ export function instanceHubs(
 }
 
 // Antigravity meters Gemini Argon, Gemini Carbon, other Gemini, and Claude/GPT models apart.
-function antigravityQuotaFamily(id: string) {
+export function antigravityQuotaFamily(id: string) {
   if (!id.startsWith("gemini")) return "shared";
   return id.includes("argon") ? "argon" : id.includes("carbon") ? "carbon" : "gemini";
 }

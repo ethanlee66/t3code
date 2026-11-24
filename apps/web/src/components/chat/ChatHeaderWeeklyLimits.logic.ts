@@ -1,4 +1,5 @@
 import {
+  antigravityQuotaFamily,
   displayLimitWindows,
   type LimitPool,
   type LimitPoolWindow,
@@ -13,7 +14,12 @@ export interface WeeklyLimitSummary {
 
 export function weeklyLimitSummaries(pools: readonly LimitPool[]): readonly WeeklyLimitSummary[] {
   return pools.flatMap((pool) => {
-    const windows = displayLimitWindows(pool).filter((window) => window.kind === "weekly");
+    const windows = displayLimitWindows(pool).filter(
+      (window) =>
+        window.kind === "weekly" &&
+        // Antigravity's shared Claude & GPT quota is not the Gemini quota users pick it for.
+        !(pool.driver === "antigravity" && antigravityQuotaFamily(window.id) === "shared"),
+    );
     if (windows.length === 0) return [];
     const remainingPercent = Math.min(...windows.map((window) => window.remainingPercent));
     return [{ driver: pool.driver, windows, remainingPercent }];
