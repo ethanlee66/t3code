@@ -3851,7 +3851,8 @@ export default function ChatView(props: ChatViewProps) {
                                   (setupQueueSendThreadKey !== null &&
                                     setupQueueSendThreadKey === activeThreadKey) ||
                                   queuedRunEdit.isSaving ||
-                                  isResuming
+                                  isResuming ||
+                                  isRevertingCheckpoint
                                 }
                                 canResume={canResume}
                                 isRevertingCheckpoint={isRevertingCheckpoint}

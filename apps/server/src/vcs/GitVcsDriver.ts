@@ -2563,17 +2563,14 @@ export const makeVcsDriverShape = Effect.fn("makeGitVcsDriverShape")(function* (
 
     deleteCheckpointRefs: Effect.fn("GitVcsDriver.checkpoints.deleteCheckpointRefs")(
       function* (input) {
-        yield* Effect.forEach(
-          input.checkpointRefs,
-          (checkpointRef) =>
-            execute({
-              operation: "GitVcsDriver.checkpoints.deleteCheckpointRefs",
-              cwd: input.cwd,
-              args: ["update-ref", "-d", checkpointRef],
-              allowNonZeroExit: true,
-            }),
-          { discard: true },
-        );
+        if (input.checkpointRefs.length === 0) return;
+        yield* execute({
+          operation: "GitVcsDriver.checkpoints.deleteCheckpointRefs",
+          cwd: input.cwd,
+          args: ["update-ref", "--stdin"],
+          stdin: input.checkpointRefs.map((checkpointRef) => `delete ${checkpointRef}\n`).join(""),
+          allowNonZeroExit: true,
+        });
         const submodules = yield* listSubmodules(input.cwd).pipe(Effect.orElseSucceed(() => []));
         for (const cwd of submodules) {
           yield* checkpoints.deleteCheckpointRefs({ cwd, checkpointRefs: input.checkpointRefs });

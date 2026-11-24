@@ -795,6 +795,7 @@ const seedRollbackHistory = Effect.gen(function* () {
   const rollbackCounts: number[] = [];
   const restored: CheckpointId[] = [];
   const deletedRefs: CheckpointId[] = [];
+  const eventsCommittedBeforeRefCleanup: boolean[] = [];
   const discardedRepositoryOrdinals: number[] = [];
   const committed: OrchestrationV2DomainEvent[] = [];
   const serviceLayer = layerCheckpointRollbackService.pipe(
@@ -812,6 +813,7 @@ const seedRollbackHistory = Effect.gen(function* () {
           deleteStaleRefs: ({ checkpoints }) =>
             Effect.sync(() => {
               deletedRefs.push(...checkpoints.map((checkpoint) => checkpoint.id));
+              eventsCommittedBeforeRefCleanup.push(committed.length > 0);
             }),
           discardRepositorySnapshots: ({ ordinals }) =>
             Effect.sync(() => {
@@ -871,6 +873,7 @@ const seedRollbackHistory = Effect.gen(function* () {
     rollbackCounts,
     restored,
     deletedRefs,
+    eventsCommittedBeforeRefCleanup,
     discardedRepositoryOrdinals,
     repositoryScopeId,
     committed,
@@ -909,6 +912,8 @@ it.layer(ProjectionStore.layer.pipe(Layer.provideMerge(SqlitePersistence.layerMe
         assert.deepEqual(history.rollbackCounts, [4]);
         assert.deepEqual(history.restored, [checkpointId(2)]);
         assert.sameMembers(history.deletedRefs, [3, 4, 5, 6].map(checkpointId));
+        // The client waits on the commit; ref cleanup must not delay it.
+        assert.deepEqual(history.eventsCommittedBeforeRefCleanup, [true]);
         const runs = yield* sql<{ ordinal: number; status: string }>`
           SELECT ordinal, status FROM orchestration_v2_projection_runs
           WHERE thread_id = ${threadId} ORDER BY ordinal`;

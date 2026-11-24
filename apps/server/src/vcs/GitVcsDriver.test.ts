@@ -2355,7 +2355,11 @@ it.effect("restores and deletes checkpoints inside populated submodules", () =>
     );
     for (const file of files) assert.isFalse(yield* fileSystem.exists(`${file}.added`));
 
-    yield* driver.checkpoints.deleteCheckpointRefs({ cwd: root, checkpointRefs: [checkpointRef] });
+    // A ref that is already gone must not keep the others from being deleted.
+    yield* driver.checkpoints.deleteCheckpointRefs({
+      cwd: root,
+      checkpointRefs: [CheckpointRef.make("refs/t3/checkpoints/missing"), checkpointRef],
+    });
     for (const cwd of [root, path.join(root, "library"), path.join(root, "library", "nested")]) {
       const ref = yield* git(cwd, ["for-each-ref", "refs/t3"]);
       assert.strictEqual(ref.stdout, "");

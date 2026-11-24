@@ -431,15 +431,6 @@ export const layer: Layer.Layer<
       if (restoreFiles) {
         yield* checkpoints.restore({ targets: restoreTargets, scopes: [scope, ...repositories] });
       }
-      const staleScopeCheckpoints = staleCheckpoints.filter((stale) => stale.scopeId === scope.id);
-      if (staleScopeCheckpoints.length > 0) {
-        yield* checkpoints.deleteStaleRefs({ scope, checkpoints: staleScopeCheckpoints });
-      }
-      yield* checkpoints.discardRepositorySnapshots({
-        rootScope: scope,
-        thread: context.thread,
-        ordinals: runsToRollback.map((run) => run.ordinal),
-      });
 
       // Lock against full-row thread writes that could restore the old native session after rollback.
       yield* threadCommands.withLock(
@@ -535,6 +526,20 @@ export const layer: Layer.Layer<
           yield* eventSink.write({ events });
         }),
       );
+
+      // After the commit so the client stops waiting. Later effects on this thread, such as the
+      // next turn reusing these ordinals, still wait for this effect to finish.
+      const staleScopeCheckpoints = staleCheckpoints.filter((stale) => stale.scopeId === scope.id);
+      if (staleScopeCheckpoints.length > 0) {
+        yield* checkpoints
+          .deleteStaleRefs({ scope, checkpoints: staleScopeCheckpoints })
+          .pipe(Effect.ignore({ log: true }));
+      }
+      yield* checkpoints.discardRepositorySnapshots({
+        rootScope: scope,
+        thread: context.thread,
+        ordinals: runsToRollback.map((run) => run.ordinal),
+      });
     });
 
     return CheckpointRollbackServiceV2.of({
