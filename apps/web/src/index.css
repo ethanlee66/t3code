@@ -1264,7 +1264,8 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   }
 
   .cosmic-effort-chamber[data-dragging] .cosmic-slider-thumb,
-  .cosmic-effort-chamber[data-dragging] .cosmic-track-fill {
+  .cosmic-effort-chamber[data-dragging] .cosmic-track-fill,
+  .cosmic-effort-chamber[data-dragging] .cosmic-track-fill-beam {
     transition: none;
   }
 
@@ -1326,6 +1327,8 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
 
   .cosmic-track-rail {
     container-type: inline-size;
+    /* Hides the fill's off-track part while leaving room for its glow. */
+    clip-path: inset(-12px 0);
     height: 3px;
     border-radius: 9999px;
     background: rgb(255 255 255 / 14%);
@@ -1335,12 +1338,13 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   .cosmic-track-fill {
     box-shadow: 0 0 10px var(--cosmic-beam-glow);
     transition:
-      width 380ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 380ms cubic-bezier(0.22, 1, 0.36, 1),
       box-shadow 380ms ease;
   }
 
   .cosmic-track-fill-beam {
     width: 100cqi;
+    transition: transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
     background: linear-gradient(
       90deg,
       #2563eb 0%,
@@ -1391,10 +1395,7 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   }
 
   .cosmic-slider-thumb {
-    transform: translate(-50%, -50%);
-    transition:
-      left 380ms cubic-bezier(0.22, 1, 0.36, 1),
-      transform 180ms ease;
+    transition: transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .cosmic-slider-thumb-halo {
@@ -1408,10 +1409,13 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
     animation-play-state: paused;
   }
 
-  /* Docked in the model picker, the slider spans the popup edge to edge. */
+  /* Docked in the model picker, the slider is an inset card above the footer controls. */
   [data-model-picker-effort] > .cosmic-effort-chamber {
-    border-radius: 0;
-    box-shadow: inset 0 -18px 30px -18px rgb(0 0 0 / 82%);
+    border-radius: 0.625rem;
+    box-shadow:
+      0 0 0 1px rgb(0 0 0 / 8%),
+      inset 0 1px 0 rgb(255 255 255 / 10%),
+      inset 0 -18px 30px -18px rgb(0 0 0 / 82%);
   }
 
   [data-model-picker-effort] > .cosmic-effort-chamber .cosmic-iridescent-rim {
@@ -1524,6 +1528,7 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
     .cosmic-effort-chamber,
     .cosmic-iridescent-rim,
     .cosmic-track-fill,
+    .cosmic-track-fill-beam,
     .cosmic-slider-thumb,
     .cosmic-slider-thumb-core,
     .cosmic-option-indicator,
@@ -1571,22 +1576,6 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
       text-shadow: none;
     }
   }
-}
-
-/* Remove the outer dropdown-glass frame/clipping so the cosmic capsule floats cleanly as the entire popover. */
-[data-slot="popover-popup"]:has(.cosmic-effort-chamber) {
-  border: 0;
-  border-radius: 1rem;
-  background: transparent;
-  box-shadow: none;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-  overflow: visible;
-}
-
-[data-slot="popover-popup"]:has(.cosmic-effort-chamber) > [data-slot="popover-viewport"] {
-  overflow: visible;
-  border-radius: 1rem;
 }
 
 /* Safe-area inset utilities for surfaces that opt into edge-to-edge rendering.

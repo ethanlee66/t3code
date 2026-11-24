@@ -564,7 +564,7 @@ function EffortBand(props: { traits: TraitsSelectionInput }) {
     <div
       data-model-picker-effort
       // Takes the popup's width instead of setting it.
-      className="w-0 min-w-full border-t border-border/70"
+      className="w-0 min-w-full border-t border-border/70 bg-muted/40 px-2 pt-2"
       onKeyDownCapture={moveBetweenRows}
     >
       <EffortRows control={effort} traits={traits} locked={locked} />
@@ -832,7 +832,7 @@ export function ComposerPickerFooter(props: {
   return (
     <>
       {props.traits ? <EffortBand traits={props.traits} /> : null}
-      <div className="flex flex-wrap items-center gap-2 border-t border-border/70 bg-muted/40 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-2 border-t border-border/70 bg-muted/40 px-3 py-2 [[data-model-picker-effort]+&]:border-t-0">
         {props.traits ? <SpeedControl traits={props.traits} /> : null}
         {props.traits ? <UltracodeControl traits={props.traits} /> : null}
         {props.traits ? <ExtraModelOptionsControl traits={props.traits} /> : null}
