@@ -64,7 +64,8 @@ version="${tag#v}"
 zip_name="T3-Code-${version}-${arch}.zip"
 
 running_from() {
-  ps -axo comm= | grep -Fq "$1/Contents/MacOS/"
+  # Not grep -q: its early exit SIGPIPEs ps, and pipefail then reports no match.
+  ps -axo comm= | grep -F "$1/Contents/MacOS/" >/dev/null
 }
 
 installed_app=""
