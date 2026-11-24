@@ -21,15 +21,13 @@ import {
   MenuRadioItemIndicator,
   MenuTrigger,
 } from "../ui/menu";
-import { Popover, PopoverPopup, PopoverTrigger } from "../ui/popover";
 import { Switch } from "../ui/switch";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
-import { ComposerControl, type ComposerControlSize } from "./ComposerControl";
+import type { ComposerControlSize } from "./ComposerControl";
 import { ComposerPermissionsSection, type RuntimeModeOption } from "./ComposerFooterControls";
 import {
   composerFloatingLayerProps,
   focusCheckedPermission,
-  takeOpenTarget,
   useComposerMenuProps,
 } from "./composerEventScope";
 import { CosmicEffortSlider } from "./CosmicEffortSlider";
@@ -42,7 +40,6 @@ import {
   ULTRATHINK_IN_BODY_NOTE,
   useTraitsSelection,
 } from "./TraitsPicker";
-import { useComposerMenuState } from "./useComposerMenuState";
 
 type SelectDescriptor = Extract<ProviderOptionDescriptor, { type: "select" }>;
 type BooleanDescriptor = Extract<ProviderOptionDescriptor, { type: "boolean" }>;
@@ -87,6 +84,21 @@ function columnControls(
   return { effort, others: controls.filter((control) => control !== effort) };
 }
 
+/** The cosmic tier for a reasoning control's current value, which colors the trigger dot. */
+function cosmicTier(
+  reasoning: SelectDescriptor | BooleanDescriptor,
+  value: string | null,
+  ultrathink: boolean,
+): CosmicDepthTier {
+  if (reasoning.type === "boolean") return reasoning.currentValue === true ? 3 : 0;
+  const options = selectableProviderOptionChoices(reasoning);
+  return resolveCosmicDepthProfile({
+    options,
+    activeIndex: options.findIndex((option) => option.id === value),
+    fallbackTier: ultrathink ? 6 : 2,
+  }).tier;
+}
+
 /**
  * What the model trigger shows after the model name: the effort word (or bars, per the
  * Appearance setting), a bolt for Fast, a workflow icon for Ultracode, and other traits such as a
@@ -121,15 +133,13 @@ export function describeComposerEffort(
     columnControls(visibility.selectDescriptors, visibility.booleanDescriptors).effort
       ?.descriptor ?? null;
   const ultrathink = visibility.ultrathinkPromptControlled && reasoning === primary;
-  const glyph =
+  const reasoningValue =
     reasoning?.type === "select"
-      ? resolveEffortGlyph(
-          reasoning,
-          ultrathink
-            ? "ultrathink"
-            : getDescriptorStringValue(reasoning, modelSelection, traits.reportedModelSelection),
-        )
+      ? ultrathink
+        ? "ultrathink"
+        : getDescriptorStringValue(reasoning, modelSelection, traits.reportedModelSelection)
       : null;
+  const glyph = reasoning?.type === "select" ? resolveEffortGlyph(reasoning, reasoningValue) : null;
   // Workflow levels such as Ultracode always show their name; the setting names every level.
   const word = glyph
     ? (glyph.special ?? (effortDisplay === "label" ? glyph.label : null))
@@ -167,6 +177,13 @@ export function describeComposerEffort(
           size === "sm" && "-ms-0.5",
         )}
       >
+        {reasoning ? (
+          <span
+            aria-hidden="true"
+            data-cosmic-tier={cosmicTier(reasoning, reasoningValue, ultrathink)}
+            className="cosmic-trigger-dot size-2 shrink-0 rounded-full"
+          />
+        ) : null}
         {word ? (
           <span data-composer-control-label className="max-w-24 truncate">
             {word}
@@ -181,65 +198,6 @@ export function describeComposerEffort(
         {contextWindow ? (
           <span
             // A label, so icon-only footers drop it; compacted rows drop it before the model.
-            data-composer-control-label
-            data-composer-secondary-trait
-            className="max-w-24 truncate text-xs"
-          >
-            {contextWindow}
-          </span>
-        ) : null}
-      </span>
-    ),
-  };
-}
-
-/** Model-trigger badges (Fast bolt, Ultracode, context window) when thinking depth owns its popover. */
-export function describeComposerModelSuffix(
-  traits: TraitsSelectionInput | null,
-  resolve: MessageResolver = m,
-): { suffix: ReactNode; detail: string | null } {
-  if (!traits) return { suffix: null, detail: null };
-  const visibility = getTraitsSectionVisibility({ ...traits, resolve });
-  if (!visibility.hasAnyControls) return { suffix: null, detail: null };
-  const modelSelection =
-    traits.instanceId && traits.model
-      ? { instanceId: traits.instanceId, model: traits.model, options: traits.modelOptions ?? [] }
-      : null;
-  const primary = visibility.primarySelectDescriptor;
-  const display = buildTraitsTriggerDisplay(
-    {
-      descriptors: visibility.descriptors,
-      primarySelectDescriptorId: primary?.id ?? null,
-      ultrathinkPromptControlled: visibility.ultrathinkPromptControlled,
-      modelSelection,
-      reportedModelSelection: traits.reportedModelSelection,
-    },
-    resolve,
-  );
-  const fast = display.speedLabel === "Fast" || display.speedLabel === "Ultrafast";
-  const contextWindow =
-    visibility.contextWindowDescriptor &&
-    getProviderOptionCurrentLabel(
-      visibility.contextWindowDescriptor,
-      modelSelection,
-      traits.reportedModelSelection,
-    );
-  if (!fast && !display.ultracode && !contextWindow) return { suffix: null, detail: null };
-  const ultracodeLabel = visibility.booleanDescriptors.find((d) => d.id === "ultracode")?.label;
-  const detail =
-    [fast ? display.speedLabel : null, display.ultracode ? ultracodeLabel : null, contextWindow]
-      .filter(Boolean)
-      .join(" · ") || null;
-  return {
-    detail,
-    suffix: (
-      <span className="flex shrink-0 items-center gap-1.5 text-muted-foreground group-hover/model-trigger:text-foreground group-data-pressed/model-trigger:text-foreground group-data-popup-open/model-trigger:text-foreground">
-        {fast ? <FastBolt ultra={display.speedLabel === "Ultrafast"} /> : null}
-        {display.ultracode ? (
-          <WorkflowIcon aria-hidden="true" data-composer-control-icon className="size-3" />
-        ) : null}
-        {contextWindow ? (
-          <span
             data-composer-control-label
             data-composer-secondary-trait
             className="max-w-24 truncate text-xs"
@@ -595,190 +553,22 @@ export function ComposerEffortColumn(props: { traits: TraitsSelectionInput | nul
   );
 }
 
-/** Standalone obsidian cosmic capsule popover containing only the thinking depth slider. */
-function StandaloneEffortSlider(props: { traits: TraitsSelectionInput }) {
+/** The picker's thinking-depth band: the selected model's reasoning levels on the cosmic slider. */
+function EffortBand(props: { traits: TraitsSelectionInput }) {
   const traits = useTraitsSelection(props.traits);
   const { effort } = columnControls(traits.selectDescriptors, traits.booleanDescriptors);
   if (!effort || traits.modelIsUnavailable) return null;
   const locked =
     effort.descriptor.id === traits.primarySelectDescriptor?.id && traits.ultrathinkInBodyText;
-  return <EffortRows control={effort} traits={traits} locked={locked} />;
-}
-
-export function ComposerEffortPopover(props: {
-  traits: TraitsSelectionInput | null;
-  effortDisplay: EffortDisplay;
-  size?: ComposerControlSize;
-  popupAlign?: "start" | "end";
-  disabled?: boolean;
-  hidden?: boolean;
-}) {
-  const messages = useMessages();
-  const size = props.size ?? "sm";
-  const [open, setOpen] = useComposerMenuState(props.hidden || props.disabled);
-  const composerFloatingLayerProps = useComposerMenuProps();
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const popupRef = useRef<HTMLDivElement>(null);
-
-  if (!props.traits) return null;
-  const visibility = getTraitsSectionVisibility({ ...props.traits, resolve: messages });
-  if (visibility.modelIsUnavailable) return null;
-  const controls = columnControls(visibility.selectDescriptors, visibility.booleanDescriptors);
-  if (!controls.effort) return null;
-
-  const modelSelection =
-    props.traits.instanceId && props.traits.model
-      ? {
-          instanceId: props.traits.instanceId,
-          model: props.traits.model,
-          options: props.traits.modelOptions ?? [],
-        }
-      : null;
-  const primary = visibility.primarySelectDescriptor;
-  const display = buildTraitsTriggerDisplay(
-    {
-      descriptors: visibility.descriptors,
-      primarySelectDescriptorId: primary?.id ?? null,
-      ultrathinkPromptControlled: visibility.ultrathinkPromptControlled,
-      modelSelection,
-      reportedModelSelection: props.traits.reportedModelSelection,
-    },
-    messages,
-  );
-  const reasoning = controls.effort.descriptor;
-  const ultrathink = visibility.ultrathinkPromptControlled && reasoning === primary;
-  const currentStringValue =
-    reasoning.type === "select"
-      ? ultrathink
-        ? "ultrathink"
-        : getDescriptorStringValue(reasoning, modelSelection, props.traits.reportedModelSelection)
-      : null;
-  const glyph =
-    reasoning.type === "select" ? resolveEffortGlyph(reasoning, currentStringValue) : null;
-  const word = glyph
-    ? (glyph.special ?? (props.effortDisplay === "label" ? glyph.label : null))
-    : reasoning.type === "boolean"
-      ? reasoning.currentValue === true
-        ? messages(msg("{option} On", { option: reasoning.label }))
-        : messages(msg("{option} Off", { option: reasoning.label }))
-      : ultrathink
-        ? "Ultrathink"
-        : (getProviderOptionCurrentLabel(
-            reasoning,
-            modelSelection,
-            props.traits.reportedModelSelection,
-          ) ?? (reasoning.id === "thinking" ? reasoning.label : null));
-
-  const effortChoices =
-    controls.effort.kind === "select"
-      ? selectableProviderOptionChoices(controls.effort.descriptor)
-      : [{ id: "false" }, { id: "true" }];
-  const tier: CosmicDepthTier =
-    controls.effort.kind === "boolean"
-      ? controls.effort.descriptor.currentValue === true
-        ? 3
-        : 0
-      : resolveCosmicDepthProfile({
-          options: effortChoices,
-          activeIndex: effortChoices.findIndex((option) => option.id === currentStringValue),
-          fallbackTier: ultrathink ? 4 : 2,
-        }).tier;
-
-  const headingLabel = reasoning.label;
-  const triggerText = word ?? (glyph ? glyph.label : null) ?? display.label ?? headingLabel;
-  const tooltipText = [headingLabel, triggerText].filter(Boolean).join(" · ");
-  const widthClass =
-    effortChoices.length >= 6
-      ? "w-120"
-      : effortChoices.length === 5
-        ? "w-108"
-        : effortChoices.length === 4
-          ? "w-96"
-          : effortChoices.length === 3
-            ? "w-76"
-            : "w-56";
-
-  const focusEffortTarget = () => {
-    const column = popupRef.current;
-    const level =
-      column?.querySelector<HTMLElement>(
-        '[data-effort-level][aria-checked="true"]:not(:disabled)',
-      ) ?? column?.querySelector<HTMLElement>("[data-effort-level]:not(:disabled)");
-    const row = level ?? column?.querySelector<HTMLElement>("[data-effort-row]:not(:disabled)");
-    row?.focus({ preventScroll: true });
-    row?.scrollIntoView({ block: "nearest" });
-  };
-
   return (
-    <Popover
-      open={open}
-      onOpenChange={(nextOpen) => setOpen(nextOpen && !props.disabled)}
-      onOpenChangeComplete={(isOpen) => {
-        if (isOpen && takeOpenTarget(triggerRef.current) === "effort") {
-          focusEffortTarget();
-        }
-      }}
+    <div
+      data-model-picker-effort
+      // Takes the popup's width instead of setting it.
+      className="w-0 min-w-full border-t border-border/70"
+      onKeyDownCapture={moveBetweenRows}
     >
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <PopoverTrigger
-              render={
-                <ComposerControl
-                  ref={triggerRef}
-                  size={size}
-                  disabled={props.disabled}
-                  data-chat-composer-effort-trigger="true"
-                  data-composer-shortcut="composer.effort"
-                  aria-label={tooltipText}
-                  onClick={(event) => {
-                    if (!open) return;
-                    if (takeOpenTarget(triggerRef.current) !== "effort") return;
-                    (
-                      event as typeof event & { preventBaseUIHandler?: () => void }
-                    ).preventBaseUIHandler?.();
-                    focusEffortTarget();
-                  }}
-                  className="group/effort-trigger shrink-0 whitespace-nowrap data-popup-open:bg-accent data-popup-open:text-foreground"
-                />
-              }
-            />
-          }
-        >
-          <span
-            aria-hidden="true"
-            data-cosmic-tier={tier}
-            className="cosmic-trigger-dot size-2 shrink-0 rounded-full"
-          />
-          {word ? (
-            <span data-composer-control-label className="max-w-24 truncate">
-              {word}
-            </span>
-          ) : glyph ? (
-            <EffortGlyph count={glyph.count} filled={glyph.filled} size={size} />
-          ) : null}
-        </TooltipTrigger>
-        <TooltipPopup side="top">{tooltipText}</TooltipPopup>
-      </Tooltip>
-      <PopoverPopup
-        ref={popupRef}
-        side="top"
-        align={props.popupAlign ?? "end"}
-        collisionAvoidance={{ side: "shift", align: "shift" }}
-        padding="none"
-        touchBackdrop
-        className="before:hidden"
-        {...composerFloatingLayerProps}
-      >
-        <div
-          data-model-picker-effort
-          className={cn("max-w-[calc(100vw-1.5rem)]", widthClass)}
-          onKeyDownCapture={moveBetweenRows}
-        >
-          <StandaloneEffortSlider traits={props.traits} />
-        </div>
-      </PopoverPopup>
-    </Popover>
+      <EffortRows control={effort} traits={traits} locked={locked} />
+    </div>
   );
 }
 
@@ -1040,15 +830,18 @@ export function ComposerPickerFooter(props: {
   onRuntimeModeChange: (mode: RuntimeMode) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 border-t border-border/70 bg-muted/40 px-3 py-2">
-      {props.traits ? <SpeedControl traits={props.traits} /> : null}
-      {props.traits ? <UltracodeControl traits={props.traits} /> : null}
-      {props.traits ? <ExtraModelOptionsControl traits={props.traits} /> : null}
-      <PermissionsMenu
-        runtimeMode={props.runtimeMode}
-        options={props.runtimeModeOptions}
-        onChange={props.onRuntimeModeChange}
-      />
-    </div>
+    <>
+      {props.traits ? <EffortBand traits={props.traits} /> : null}
+      <div className="flex flex-wrap items-center gap-2 border-t border-border/70 bg-muted/40 px-3 py-2">
+        {props.traits ? <SpeedControl traits={props.traits} /> : null}
+        {props.traits ? <UltracodeControl traits={props.traits} /> : null}
+        {props.traits ? <ExtraModelOptionsControl traits={props.traits} /> : null}
+        <PermissionsMenu
+          runtimeMode={props.runtimeMode}
+          options={props.runtimeModeOptions}
+          onChange={props.onRuntimeModeChange}
+        />
+      </div>
+    </>
   );
 }

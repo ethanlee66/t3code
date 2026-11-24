@@ -1224,6 +1224,34 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
     --cosmic-active-row-bg: rgb(196 181 253 / 16%);
   }
 
+  /* Tier 5: Magnetar corona, magenta & rose plasma */
+  .cosmic-effort-chamber[data-cosmic-tier="5"] {
+    --cosmic-base-top: #0b0310;
+    --cosmic-base-bottom: #14051a;
+    --cosmic-outer-glow: rgb(236 72 153 / 34%);
+    --cosmic-beam-glow: rgb(244 114 182 / 58%);
+    --cosmic-orb-core: #fdf2f8;
+    --cosmic-orb-rim: #f472b6;
+    --cosmic-orb-aura: rgb(236 72 153 / 56%);
+    --cosmic-pill-glow: rgb(244 114 182 / 46%);
+    --cosmic-rim-opacity: 0.9;
+    --cosmic-active-row-bg: rgb(236 72 153 / 18%);
+  }
+
+  /* Tier 6: Supernova, white-gold core */
+  .cosmic-effort-chamber[data-cosmic-tier="6"] {
+    --cosmic-base-top: #0c0703;
+    --cosmic-base-bottom: #160b04;
+    --cosmic-outer-glow: rgb(251 191 36 / 38%);
+    --cosmic-beam-glow: rgb(252 211 77 / 64%);
+    --cosmic-orb-core: #fffbeb;
+    --cosmic-orb-rim: #fbbf24;
+    --cosmic-orb-aura: rgb(251 191 36 / 60%);
+    --cosmic-pill-glow: rgb(252 211 77 / 50%);
+    --cosmic-rim-opacity: 1;
+    --cosmic-active-row-bg: rgb(251 191 36 / 18%);
+  }
+
   .cosmic-effort-chamber[data-disabled] {
     opacity: 0.78;
   }
@@ -1320,6 +1348,28 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
     background: linear-gradient(90deg, rgb(100 116 139 / 55%), rgb(203 213 225 / 85%));
   }
 
+  .cosmic-effort-chamber[data-cosmic-tier="5"] .cosmic-track-fill-beam {
+    background: linear-gradient(
+      90deg,
+      #2563eb 0%,
+      #6366f1 30%,
+      #a855f7 56%,
+      #ec4899 82%,
+      #fdf2f8 100%
+    );
+  }
+
+  .cosmic-effort-chamber[data-cosmic-tier="6"] .cosmic-track-fill-beam {
+    background: linear-gradient(
+      90deg,
+      #6366f1 0%,
+      #a855f7 26%,
+      #ec4899 50%,
+      #f59e0b 76%,
+      #fffbeb 100%
+    );
+  }
+
   .cosmic-detent {
     width: 3px;
     height: 3px;
@@ -1343,6 +1393,22 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   .cosmic-slider-thumb-halo {
     background: radial-gradient(circle, var(--cosmic-orb-aura) 0%, transparent 72%);
     animation: cosmic-orb-pulse 2.4s ease-in-out infinite;
+  }
+
+  /* Idle, the slider holds still so an open model picker repaints nothing. */
+  .cosmic-effort-chamber:not([data-active]) .cosmic-iridescent-rim::before,
+  .cosmic-effort-chamber:not([data-active]) .cosmic-slider-thumb-halo {
+    animation-play-state: paused;
+  }
+
+  /* Docked in the model picker, the slider spans the popup edge to edge. */
+  [data-model-picker-effort] > .cosmic-effort-chamber {
+    border-radius: 0;
+    box-shadow: inset 0 -18px 30px -18px rgb(0 0 0 / 82%);
+  }
+
+  [data-model-picker-effort] > .cosmic-effort-chamber .cosmic-iridescent-rim {
+    display: none;
   }
 
   .cosmic-slider-thumb-core {
@@ -1430,6 +1496,16 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   .cosmic-trigger-dot[data-cosmic-tier="4"] {
     background: linear-gradient(135deg, #6366f1, #a855f7, #ede9fe);
     box-shadow: 0 0 8px rgb(167 139 250 / 72%);
+  }
+
+  .cosmic-trigger-dot[data-cosmic-tier="5"] {
+    background: linear-gradient(135deg, #a855f7, #ec4899, #fbcfe8);
+    box-shadow: 0 0 8px rgb(236 72 153 / 72%);
+  }
+
+  .cosmic-trigger-dot[data-cosmic-tier="6"] {
+    background: radial-gradient(circle at 35% 35%, #fffbeb, #fbbf24 55%, #f97316);
+    box-shadow: 0 0 9px rgb(251 191 36 / 80%);
   }
 
   @media (prefers-reduced-motion: reduce) {

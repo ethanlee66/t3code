@@ -14,7 +14,6 @@ import "~/index.css";
 import { act, render } from "../../../test/render";
 import {
   ComposerEffortColumn,
-  ComposerEffortPopover,
   ComposerPickerFooter,
   describeComposerEffort,
 } from "./ComposerModelEffort";
@@ -209,7 +208,7 @@ function ThinkingSliderColumn(props: { promptUltrathink?: "none" | "body" }) {
   );
 }
 
-function ThinkingPopoverHarness() {
+function ThinkingPickerFooterHarness() {
   const [options, setOptions] = useState<ReadonlyArray<ProviderOptionSelection>>([]);
   const traits: TraitsSelectionInput = {
     provider: ProviderDriverKind.make("antigravity"),
@@ -220,15 +219,15 @@ function ThinkingPopoverHarness() {
     onModelOptionsChange: (next) => setOptions(next ?? []),
   };
   return (
-    <div className="flex flex-col gap-3">
-      <ComposerEffortPopover traits={traits} effortDisplay="label" />
+    <>
+      <p role="status">{describeComposerEffort(traits, "label", "sm").suffix}</p>
       <ComposerPickerFooter
         traits={traits}
         runtimeMode="full-access"
         runtimeModeOptions={[]}
         onRuntimeModeChange={() => {}}
       />
-    </div>
+    </>
   );
 }
 
@@ -314,13 +313,13 @@ it("updates cosmic tier during horizontal drag and commits on release", async ()
   expect(chamber).toHaveAttribute("data-cosmic-tier", "3");
 });
 
-it("locks dragging and shows tier 4 when ultrathink is in the prompt body", async () => {
+it("locks dragging and shows the ultra tier when ultrathink is in the prompt body", async () => {
   await using screen = await render(<ThinkingSliderColumn promptUltrathink="body" />, {
     router: false,
   }); // no routes involved
   const chamber = screen.container.querySelector<HTMLElement>(".cosmic-effort-chamber")!;
   const track = screen.getByRole("slider", { name: "Thinking Level" });
-  expect(chamber).toHaveAttribute("data-cosmic-tier", "4");
+  expect(chamber).toHaveAttribute("data-cosmic-tier", "6");
   await expect.element(track).toHaveAttribute("aria-disabled", "true");
 
   const trackEl = track.element();
@@ -346,30 +345,23 @@ it("locks dragging and shows tier 4 when ultrathink is in the prompt body", asyn
       }),
     );
   });
-  expect(chamber).toHaveAttribute("data-cosmic-tier", "4");
+  expect(chamber).toHaveAttribute("data-cosmic-tier", "6");
   await expect.element(screen.getByRole("radio", { name: "Low" })).toBeDisabled();
 });
 
-it("opens standalone thinking capsule without header or extra options, and moves extra options to footer", async () => {
-  await using screen = await render(<ThinkingPopoverHarness />, { router: false }); // no routes involved
-  const trigger = screen.getByRole("button", { name: "Thinking Level · Medium" });
-  await expect.element(trigger).toHaveTextContent("Medium");
+it("puts the thinking slider in the picker footer and keeps other options in its row", async () => {
+  await using screen = await render(<ThinkingPickerFooterHarness />, { router: false }); // no routes involved
+  await expect.element(screen.getByRole("slider", { name: "Thinking Level" })).toBeVisible();
+  const band = document.querySelector("[data-model-picker-effort]");
+  expect(band?.textContent).not.toContain("Cyber Access");
 
-  await userEvent.click(trigger);
-  await expect.element(page.getByRole("slider", { name: "Thinking Level" })).toBeVisible();
-  const effortPopup = document.querySelector("[data-model-picker-effort]");
-  expect(effortPopup).not.toBeNull();
-  expect(effortPopup?.textContent).not.toContain("Thinking Level");
-  expect(effortPopup?.textContent).not.toContain("Cyber Access");
+  const status = screen.getByRole("status");
+  await expect.element(status).toHaveTextContent("Medium");
+  expect(status.element().querySelector(".cosmic-trigger-dot")).not.toBeNull();
+  await userEvent.click(screen.getByRole("radio", { name: "Extra" }));
+  await expect.element(status).toHaveTextContent("Extra");
 
-  await userEvent.click(page.getByRole("radio", { name: "Extra" }));
-  await expect
-    .element(screen.getByRole("button", { name: "Thinking Level · Extra" }))
-    .toHaveTextContent("Extra");
-
-  await userEvent.keyboard("{Escape}");
-  const cyberButton = screen.getByRole("button", { name: "Cyber Access: Standard" });
-  await userEvent.click(cyberButton);
+  await userEvent.click(screen.getByRole("button", { name: "Cyber Access: Standard" }));
   await userEvent.click(page.getByRole("menuitemradio", { name: "Extended" }));
   await expect
     .element(screen.getByRole("button", { name: "Cyber Access: Extended" }))

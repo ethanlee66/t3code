@@ -1,4 +1,4 @@
-export type CosmicDepthTier = 0 | 1 | 2 | 3 | 4;
+export type CosmicDepthTier = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 export interface CosmicDepthProfile {
   readonly tier: CosmicDepthTier;
@@ -10,17 +10,10 @@ const TIER_0_IDS = new Set(["off", "none", "false", "disabled"]);
 const TIER_1_IDS = new Set(["minimal", "min", "low"]);
 const TIER_2_IDS = new Set(["medium", "med", "balanced", "default", "auto", "normal"]);
 const TIER_3_IDS = new Set(["high", "true", "on"]);
-const TIER_4_IDS = new Set([
-  "xhigh",
-  "extra",
-  "extra_high",
-  "extra-high",
-  "super-high",
-  "max",
-  "ultra",
-  "ultrathink",
-  "ultracode",
-]);
+const TIER_4_IDS = new Set(["xhigh", "extra", "extra_high", "extra-high", "super-high"]);
+// Max and Ultra get scenes of their own, so a scale such as Codex's xhigh, max, ultra stays legible.
+const TIER_5_IDS = new Set(["max"]);
+const TIER_6_IDS = new Set(["ultra", "ultrathink", "ultracode"]);
 
 function clamp01(value: number): number {
   if (!Number.isFinite(value)) return 0;
@@ -44,6 +37,8 @@ export function resolveCosmicDepthTier(
   if (TIER_2_IDS.has(normalized)) return 2;
   if (TIER_3_IDS.has(normalized)) return 3;
   if (TIER_4_IDS.has(normalized)) return 4;
+  if (TIER_5_IDS.has(normalized)) return 5;
+  if (TIER_6_IDS.has(normalized)) return 6;
 
   if (startsAtOff) {
     if (index <= 0 || count <= 1) return 0;
@@ -71,7 +66,7 @@ export function resolveCosmicDepthProfile(input: {
 
   if (activeIndex < 0 || activeIndex >= count) {
     tier = fallbackTier ?? 2;
-    const fallbackProgress = tier === 4 ? 1 : tier === 0 ? 0 : 0.5;
+    const fallbackProgress = tier >= 4 ? 1 : tier === 0 ? 0 : 0.5;
     progress = continuousProgress !== undefined ? clamp01(continuousProgress) : fallbackProgress;
   } else {
     tier = resolveCosmicDepthTier(options[activeIndex]!.id, activeIndex, count, startsAtOff);

@@ -214,7 +214,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
     return row != null;
   };
   const openTarget = (target: "effort" | "permissions") => {
-    if (target === "effort" && docked) {
+    if (target === "effort") {
       focusEffort("any");
       return;
     }
@@ -496,7 +496,8 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
             </div>
           </DockedPickerContext>
         ) : props.footer ? (
-          <div className="flex max-h-(--available-height) flex-col">
+          // Wide enough for six thinking levels; the list stretches so no model resizes the popup.
+          <div className="flex w-104 max-w-[calc(100vw-1.5rem)] max-h-(--available-height) flex-col [&>:first-child]:w-full [&>:first-child]:max-w-none">
             {picker}
             {props.footer}
           </div>

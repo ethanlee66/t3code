@@ -24,20 +24,16 @@ import { cn } from "~/lib/utils";
 import { resolveComposerTraitsInput } from "./composerProviderState";
 import { useApplyThreadModelPick } from "./useApplyThreadModelPick";
 import { useStableCallback } from "../../hooks/useStableCallback";
-import {
-  ComposerEffortPopover,
-  ComposerPickerFooter,
-  describeComposerModelSuffix,
-} from "./ComposerModelEffort";
+import { ComposerPickerFooter, describeComposerEffort } from "./ComposerModelEffort";
 import type { useComposerProviderModel } from "./useComposerProviderModel";
 import { resolveComposerControlsOwnership } from "./composerControlsOwnership";
 
 /**
- * The composer footer controls: the model picker (with speed, extra model traits and permissions in
- * its footer), the standalone thinking-depth slider trigger, mode controls and the overflow menu for
- * blocks that do not fit. Rendered in the expanded footer or the resting controls host.
+ * The composer footer controls: the model picker (with the thinking-depth slider, speed, extra model
+ * traits and permissions below its list), mode controls and the overflow menu for blocks that do
+ * not fit. Rendered in the expanded footer or the resting controls host.
  */
-// Keep the model trigger filled while its popup is open.
+// Model and effort share one trigger; it stays filled while its popup is open.
 const MODEL_TRIGGER_STATES = "data-popup-open:bg-accent data-popup-open:text-foreground";
 
 export function ComposerControlsBar(props: {
@@ -164,7 +160,7 @@ export function ComposerControlsBar(props: {
     promptUltrathink,
     onPromptEdit,
   });
-  const modelSuffix = describeComposerModelSuffix(traitsInput, m);
+  const effort = describeComposerEffort(traitsInput, props.effortDisplay, controlSize, m);
   const pickerInstanceId = providerCatalogPending
     ? (activeThreadModelSelection?.instanceId ?? selectedInstanceId)
     : selectedInstanceId;
@@ -217,9 +213,11 @@ export function ComposerControlsBar(props: {
         MODEL_TRIGGER_STATES,
         composerControlsCollapsed ? "min-w-13 shrink text-xs!" : "min-w-13",
       )}
-      triggerSuffix={modelSuffix.suffix}
-      triggerDetail={modelSuffix.detail}
-      {...(pickerOwnsModeShortcut ? { triggerShortcuts: "composer.mode" } : {})}
+      triggerSuffix={effort.suffix}
+      triggerDetail={effort.detail}
+      triggerShortcuts={
+        pickerOwnsModeShortcut ? "composer.effort composer.mode" : "composer.effort"
+      }
       footer={
         <ComposerPickerFooter
           traits={traitsInput}
@@ -261,14 +259,6 @@ export function ComposerControlsBar(props: {
   ) : (
     <>
       {composerModelPicker}
-      <ComposerEffortPopover
-        traits={traitsInput}
-        effortDisplay={props.effortDisplay}
-        size={controlSize}
-        popupAlign={composerControlsCollapsed ? "start" : "end"}
-        disabled={providerCatalogPending || isSendBusy}
-        hidden={composerControlsHidden}
-      />
 
       <>
         {restingBlockDefs.map((def, index) => {

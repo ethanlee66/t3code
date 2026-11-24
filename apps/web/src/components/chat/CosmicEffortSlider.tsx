@@ -47,6 +47,8 @@ export function CosmicEffortSlider(props: {
   const [drag, setDrag] = useState<{ ratio: number; index: number; scrubbing: boolean } | null>(
     null,
   );
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
 
   const clearSuppressClick = () => {
     if (suppressClickTimerRef.current !== null) {
@@ -78,7 +80,7 @@ export function CosmicEffortSlider(props: {
         ? count - 1
         : 0;
   const displayOption = props.options[displayIndex] ?? props.options[0];
-  const fallbackTier: CosmicDepthTier = props.highlightMaxWhenUnlisted ? 4 : 2;
+  const fallbackTier: CosmicDepthTier = props.highlightMaxWhenUnlisted ? 6 : 2;
   const profile = resolveCosmicDepthProfile({
     options: props.options,
     activeIndex: drag ? drag.index : committedIndex,
@@ -209,6 +211,7 @@ export function CosmicEffortSlider(props: {
   const thumbFraction = thumbPercent / 100;
   const hasLockedNote = Boolean(props.lockedNote);
   const isScrubbing = Boolean(drag?.scrubbing);
+  const active = hovered || focused || drag !== null;
 
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- mounts and disposes the imperative WebGL/Canvas2D cosmic backdrop renderer
   useEffect(() => {
@@ -230,16 +233,24 @@ export function CosmicEffortSlider(props: {
       thumbFraction,
       hasLockedNote,
       dragging: isScrubbing,
+      active,
     });
-  }, [profile.tier, profile.progress, thumbFraction, hasLockedNote, isScrubbing]);
+  }, [profile.tier, profile.progress, thumbFraction, hasLockedNote, isScrubbing, active]);
 
   return (
     <div
       className="cosmic-effort-chamber"
       data-cosmic-tier={profile.tier}
       data-dragging={isScrubbing ? "" : undefined}
+      data-active={active ? "" : undefined}
       data-disabled={props.disabled ? "" : undefined}
       data-has-locked-note={props.lockedNote ? "" : undefined}
+      onPointerEnter={() => setHovered(true)}
+      onPointerLeave={() => setHovered(false)}
+      onFocus={() => setFocused(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
+      }}
     >
       <div data-cosmic-backdrop aria-hidden="true" className="pointer-events-none absolute inset-0">
         <canvas ref={canvasRef} className="block size-full" />

@@ -20,21 +20,22 @@ describe("CosmicEffortSlider.logic", () => {
     ]);
   });
 
-  it("maps off-prefixed and ultra reasoning scales from tier 0 through tier 4", () => {
+  it("gives every named level from off through ultra its own tier", () => {
     const options = [
       { id: "off" },
       { id: "low" },
       { id: "medium" },
       { id: "high" },
+      { id: "xhigh" },
       { id: "max" },
       { id: "ultra" },
     ];
     expect(
       options.map((opt, index) => resolveCosmicDepthTier(opt.id, index, options.length, true)),
-    ).toEqual([0, 1, 2, 3, 4, 4]);
+    ).toEqual([0, 1, 2, 3, 4, 5, 6]);
     expect(resolveCosmicDepthProfile({ options, activeIndex: 0 }).intensity).toBe(0.12);
-    expect(resolveCosmicDepthProfile({ options, activeIndex: 5 })).toEqual({
-      tier: 4,
+    expect(resolveCosmicDepthProfile({ options, activeIndex: 6 })).toEqual({
+      tier: 6,
       progress: 1,
       intensity: 1,
     });
@@ -66,8 +67,8 @@ describe("CosmicEffortSlider.logic", () => {
 
   it("handles unlisted prompt-injected ultrathink and single-option edge cases", () => {
     const options = [{ id: "low" }, { id: "medium" }, { id: "high" }];
-    expect(resolveCosmicDepthProfile({ options, activeIndex: -1, fallbackTier: 4 })).toEqual({
-      tier: 4,
+    expect(resolveCosmicDepthProfile({ options, activeIndex: -1, fallbackTier: 6 })).toEqual({
+      tier: 6,
       progress: 1,
       intensity: 1,
     });

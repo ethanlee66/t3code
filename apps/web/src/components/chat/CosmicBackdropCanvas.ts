@@ -6,6 +6,8 @@ export interface CosmicBackdropState {
   readonly thumbFraction: number;
   readonly hasLockedNote: boolean;
   readonly dragging: boolean;
+  /** Hovered, focused or dragged. Otherwise the backdrop settles and holds its last frame. */
+  readonly active: boolean;
 }
 
 export interface CosmicBackdropController {
@@ -125,7 +127,9 @@ void main() {
   float w1 = clamp(1.0 - abs(u_tier - 1.0), 0.0, 1.0);
   float w2 = clamp(1.0 - abs(u_tier - 2.0), 0.0, 1.0);
   float w3 = clamp(1.0 - abs(u_tier - 3.0), 0.0, 1.0);
-  float w4 = clamp(u_tier - 3.0, 0.0, 1.0);
+  float w4 = clamp(1.0 - abs(u_tier - 4.0), 0.0, 1.0);
+  float w5 = clamp(1.0 - abs(u_tier - 5.0), 0.0, 1.0);
+  float w6 = clamp(u_tier - 5.0, 0.0, 1.0);
 
   vec2 deltaT = st - thumbSt;
   float distT = length(deltaT);
@@ -215,15 +219,56 @@ void main() {
     c4 += mix(vec3(0.70, 0.46, 0.98), vec3(0.95, 0.92, 1.0), smoothstep(0.26, 0.78, fil)) * fil * (0.68 + 0.24 * ultraBoost);
   }
 
-  vec3 col = c0 * w0 + c1 * w1 + c2 * w2 + c3 * w3 + c4 * w4;
+  // Tier 5: Magnetar corona, crimson & rose plasma threaded with amber magnetic field lines
+  vec3 c5 = vec3(0.026, 0.004, 0.012);
+  if (w5 > 0.001) {
+    vec2 p5 = spaceP * 1.3;
+    vec2 flow = vec2(
+      fbm(p5 + vec2(u_time * 0.16, -u_time * 0.09)),
+      fbm(p5 + vec2(6.3 - u_time * 0.12, 2.1 + u_time * 0.14))
+    );
+    float plasma = smoothstep(0.30, 0.80, fbm(p5 * 1.2 + 1.8 * flow + vec2(u_time * 0.07, 0.0)));
+    float field = spaceP.y * 7.0 + (flow.x - 0.5) * 4.5 + (flow.y - 0.5) * 2.0;
+    float lines = pow(abs(sin(field * 3.14159 - u_time * 0.6)), 22.0) * smoothstep(0.40, 0.75, flow.y);
+    float fil5 = pow(clamp(ridgedFbm(p5 * 1.5 + 1.2 * flow - vec2(u_time * 0.10, 0.0)), 0.0, 1.0), 2.4);
+    c5 += mix(vec3(0.42, 0.02, 0.16), vec3(0.95, 0.14, 0.32), smoothstep(0.35, 0.85, flow.x)) * plasma * 0.92;
+    c5 += vec3(1.0, 0.60, 0.22) * lines * (0.35 + 0.65 * plasma) * 0.78;
+    c5 += mix(vec3(1.0, 0.30, 0.45), vec3(1.0, 0.80, 0.62), smoothstep(0.30, 0.80, fil5)) * fil5 * 0.78;
+  }
+
+  // Tier 6: Supernova, a white-gold core bursting from the thumb with radial rays, an anamorphic
+  // flare along the track, a prismatic shock ring and a warm remnant
+  vec3 c6 = vec3(0.020, 0.010, 0.006);
+  if (w6 > 0.001) {
+    // Noise sampled on the unit circle depends only on direction, so it streaks outward with no seam.
+    float rays = pow(smoothstep(0.34, 0.86, fbm(safeDirT * 2.6 + vec2(u_time * 0.05, -u_time * 0.04))), 2.0);
+    float falloff = exp(-distT * 1.1);
+    float core = exp(-distT * distT * 22.0);
+    float flare = exp(-abs(deltaT.y) * 34.0) * exp(-abs(deltaT.x) * 1.5);
+    vec2 p6 = spaceP * 1.35;
+    vec2 wR = vec2(fbm(p6 + vec2(u_time * 0.12, 0.0)), fbm(p6 + vec2(3.3, -u_time * 0.10)));
+    float remnant = pow(clamp(ridgedFbm(p6 * 1.4 + 1.6 * wR), 0.0, 1.0), 2.3);
+    float ringPhase = fract(u_time * 0.09);
+    float ring = exp(-pow((distT - ringPhase * 2.6) * 7.0, 2.0)) * (1.0 - ringPhase);
+    vec3 prism = mix(vec3(0.35, 0.85, 1.0), vec3(1.0, 0.45, 0.85), 0.5 + 0.5 * dot(safeDirT, vec2(0.7071)));
+    c6 += vec3(0.20, 0.07, 0.02) * smoothstep(0.30, 0.80, wR.x);
+    c6 += vec3(1.0, 0.48, 0.14) * remnant * (0.62 + 0.50 * falloff);
+    c6 += vec3(0.30, 0.78, 1.0) * remnant * smoothstep(0.50, 0.90, wR.y) * 0.34;
+    c6 += vec3(1.0, 0.76, 0.34) * rays * falloff * 1.05;
+    c6 += prism * ring * 0.38;
+    c6 += vec3(1.0, 0.90, 0.70) * flare * 0.9;
+    c6 += vec3(1.0, 0.96, 0.86) * core * 1.3;
+  }
+
+  vec3 col = c0 * w0 + c1 * w1 + c2 * w2 + c3 * w3 + c4 * w4 + c5 * w5 + c6 * w6;
 
   // Multi-plane astronomical parallax starfield
-  float warpStretch = 1.0 + w4 * 1.35 + u_surge * 0.9;
+  float warpStretch = 1.0 + w4 * 1.35 + w5 * 1.6 + w6 * 2.0 + u_surge * 0.9;
   float parallaxShift = u_progress - 0.5;
   vec3 stars = vec3(0.0);
   stars += starPlane(spaceP + vec2(parallaxShift * 0.08, 0.0), 9.5, 0.84, 0.00055, u_rawTime, 1.0) * 0.78;
   stars += starPlane(spaceP + vec2(parallaxShift * 0.16 + 11.4, 3.7), 6.2, 0.89, 0.00095, u_rawTime * 1.15, warpStretch) * 0.92;
-  stars += starPlane(spaceP + vec2(parallaxShift * 0.26 + 27.9, -7.1), 3.9, 0.93, 0.00145, u_rawTime * 1.3, 1.0 + w4 * 1.85 + u_surge * 1.1) * 1.05;
+  stars += starPlane(spaceP + vec2(parallaxShift * 0.26 + 27.9, -7.1), 3.9, 0.93, 0.00145, u_rawTime * 1.3, 1.0 + w4 * 1.85 + w5 * 2.1 + w6 * 2.6 + u_surge * 1.1) * 1.05;
   col += stars * (0.68 + 0.32 * (1.0 - w0 * 0.5));
 
   // Soft localized thumb optical spotlight (no geometric border rings)
@@ -232,8 +277,10 @@ void main() {
     vec3(0.22, 0.76, 0.96) * w1 +
     vec3(0.46, 0.56, 0.98) * w2 +
     vec3(0.68, 0.44, 0.98) * w3 +
-    vec3(0.84, 0.78, 1.0) * w4;
-  float thumbGlow = exp(-distT * distT * 4.4) * (0.26 + 0.20 * u_drag + 0.22 * u_surge + 0.12 * smoothstep(0.0, 4.0, u_tier));
+    vec3(0.84, 0.78, 1.0) * w4 +
+    vec3(1.0, 0.52, 0.78) * w5 +
+    vec3(1.0, 0.86, 0.56) * w6;
+  float thumbGlow = exp(-distT * distT * 4.4) * (0.26 + 0.20 * u_drag + 0.22 * u_surge + 0.12 * smoothstep(0.0, 4.0, u_tier) + 0.10 * smoothstep(4.0, 6.0, u_tier));
   col += thumbTint * thumbGlow;
 
   // ACES filmic tone map, readability scrim under stop labels, and micro-grain dithering
@@ -275,6 +322,8 @@ const TIER_PALETTES_2D: ReadonlyArray<readonly [string, string, string, string]>
   ["#040412", "rgba(59, 130, 246, 0.32)", "rgba(99, 102, 241, 0.36)", "rgba(165, 180, 252, 0.40)"],
   ["#070312", "rgba(79, 70, 229, 0.36)", "rgba(139, 92, 246, 0.40)", "rgba(196, 181, 253, 0.44)"],
   ["#04020b", "rgba(67, 56, 202, 0.38)", "rgba(124, 58, 237, 0.42)", "rgba(245, 243, 255, 0.48)"],
+  ["#0b0310", "rgba(190, 24, 93, 0.36)", "rgba(236, 72, 153, 0.40)", "rgba(251, 207, 232, 0.50)"],
+  ["#0c0703", "rgba(234, 88, 12, 0.36)", "rgba(251, 191, 36, 0.42)", "rgba(255, 251, 235, 0.60)"],
 ];
 
 function lerp(a: number, b: number, t: number): number {
@@ -314,7 +363,7 @@ function drawCosmicFallback2D(
   drag: number,
   surge: number,
 ) {
-  const paletteIndex = clamp(Math.round(tier), 0, 4);
+  const paletteIndex = clamp(Math.round(tier), 0, TIER_PALETTES_2D.length - 1);
   const palette = TIER_PALETTES_2D[paletteIndex] ?? TIER_PALETTES_2D[0]!;
   const [baseColor, cloudAColor, cloudBColor, thumbGlowColor] = palette;
 
@@ -382,6 +431,7 @@ const DEFAULT_BACKDROP_STATE: CosmicBackdropState = {
   thumbFraction: 0.5,
   hasLockedNote: false,
   dragging: false,
+  active: false,
 };
 
 export function mountCosmicBackdrop(
@@ -623,7 +673,17 @@ export function mountCosmicBackdrop(
 
     syncSize();
     renderFrame();
-    scheduleNextFrame();
+    const settled =
+      Math.abs(targetState.tier - currentTier) < 0.002 &&
+      Math.abs(targetState.progress - currentProgress) < 0.001 &&
+      Math.abs(targetState.thumbFraction - currentThumbFraction) < 0.001 &&
+      currentDrag < 0.01 &&
+      currentSurge < 0.01;
+    if (targetState.active || !settled) {
+      scheduleNextFrame();
+    } else {
+      lastTimestamp = 0;
+    }
   };
 
   const handleVisibilityChange = () => {
