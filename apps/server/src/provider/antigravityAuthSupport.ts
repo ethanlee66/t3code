@@ -73,6 +73,7 @@ const removedEnvironmentKeys = new Set([
   "AGY_ACP_ENABLE_OAUTH",
   "GEMINI_HOME",
   "AGY_ACP_FORCE_FILE_STORAGE",
+  "AGY_CLI_FORCE_FILE_TOKEN_STORAGE",
   "AGY_CLI_DISABLE_AUTO_UPDATE",
   "BROWSER",
   "PYTHONUNBUFFERED",
@@ -227,10 +228,14 @@ function antigravityEnvironment(
     baseEnv.SSL_CERT_DIR === undefined
       ? { SSL_CERT_FILE: profile.caBundlePath }
       : {}),
-    // The 1.5 CLI ignores AGY_ACP_FORCE_FILE_STORAGE and keeps Google sign-ins in one OS keyring
-    // entry for every profile, unless it believes it runs over SSH. Sign-in then uses `--login`.
+    // The 1.5 CLI ignores AGY_ACP_FORCE_FILE_STORAGE: 1.5.16+ honors
+    // AGY_CLI_FORCE_FILE_TOKEN_STORAGE (and no longer bypasses an unlocked macOS keychain on SSH),
+    // while earlier 1.5.x builds still rely on SSH_CONNECTION. Sign-in then uses `--login`.
     ...(auth.authMethod === "oauth-personal"
-      ? { SSH_CONNECTION: baseEnv.SSH_CONNECTION || "127.0.0.1 0 127.0.0.1 0" }
+      ? {
+          AGY_CLI_FORCE_FILE_TOKEN_STORAGE: "1",
+          SSH_CONNECTION: baseEnv.SSH_CONNECTION || "127.0.0.1 0 127.0.0.1 0",
+        }
       : {}),
     GEMINI_HOME: profile.geminiHome,
     AGY_ACP_FORCE_FILE_STORAGE: "1",
