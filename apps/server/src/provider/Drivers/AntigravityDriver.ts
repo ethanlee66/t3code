@@ -52,7 +52,6 @@ import {
 import {
   antigravityModelOptions,
   antigravitySessionMode,
-  antigravityThinkingConfig,
   makeAntigravityAcpRuntime,
   type AntigravityAcpRuntimeInput,
 } from "../acp/AntigravityAcpSupport.ts";
@@ -513,12 +512,23 @@ export const AntigravityDriver: ProviderDriver<
           ? provider.onAvailableCommands(event.availableCommands)
           : Effect.void;
       }).pipe(Effect.forkScoped);
-      // Thinking levels differ per model and are reported only for the selected one.
+      // Thinking levels differ per model and are reported only for the selected one;
+      // the session's initial default model itself may have none (e.g. Orchestrator).
       const configOptions = started.sessionSetupResult.configOptions ?? [];
       const current = configOptions.find((option) => option.id === "model")?.currentValue;
-      if (antigravityThinkingConfig(configOptions) !== undefined && typeof current === "string") {
-        for (const model of [...antigravityModelOptions(configOptions), { value: current }]) {
-          yield* runtime.setModel(model.value).pipe(Effect.ignore);
+      const otherModels =
+        typeof current === "string"
+          ? [
+              ...new Set(
+                antigravityModelOptions(configOptions)
+                  .map((model) => model.value)
+                  .filter((value) => value.trim().length > 0 && value !== current),
+              ),
+            ]
+          : [];
+      if (typeof current === "string" && otherModels.length > 0) {
+        for (const model of [...otherModels, current]) {
+          yield* runtime.setModel(model).pipe(Effect.ignore);
         }
       }
       yield* runtime.drainEvents;
