@@ -360,9 +360,13 @@ it.layer(layerTest)("AntigravityDriver", (it) => {
           "initialize",
           "auth/login",
           "session/new",
+          "session/set_config_option",
+          "session/set_config_option",
           "initialize",
           "auth/login",
           "session/new",
+          "session/set_config_option",
+          "session/set_config_option",
         ]);
         expect(
           requests
@@ -459,6 +463,49 @@ it.layer(layerTest)("AntigravityDriver", (it) => {
               .map((request) => request.params?.value),
           ).toEqual(["default"]);
         }
+      }),
+  );
+
+  it.effect.skipIf(windowsHost)(
+    "probes thinking levels for other models when the default model has none",
+    () =>
+      Effect.gen(function* () {
+        const h = yield* makeHarness({
+          environment: [{ name: "T3_ACP_ANTIGRAVITY_THINKING_ON_HIGH", value: "1" }],
+        });
+        yield* h.refresh();
+        const snapshot = yield* h.instance.snapshot.getSnapshot;
+        const defaultModel = snapshot.models.find((model) => model.slug === "gemini-test-low");
+        const highModel = snapshot.models.find((model) => model.slug === "gemini-test-high");
+        expect(defaultModel).toMatchObject({
+          isDefault: true,
+          aliases: [ANTIGRAVITY_DEFAULT_MODEL],
+          capabilities: { optionDescriptors: [] },
+        });
+        expect(highModel?.capabilities?.optionDescriptors).toHaveLength(1);
+        expect(highModel?.capabilities?.optionDescriptors?.[0]).toMatchObject({
+          id: "thought_level",
+          type: "select",
+          role: "reasoning",
+          currentValue: "high",
+        });
+        const highDescriptor = highModel?.capabilities?.optionDescriptors?.[0];
+        expect(
+          highDescriptor?.type === "select"
+            ? highDescriptor.options.map((option) => option.id)
+            : [],
+        ).toEqual(["low", "medium", "high", "xhigh"]);
+        const requests = yield* h.readRequests;
+        expect(
+          requests
+            .filter(
+              (request) =>
+                request.method === "session/set_config_option" &&
+                request.params?.configId === "model",
+            )
+            .map((request) => request.params?.value),
+        ).toEqual(["gemini-test-high", "gemini-test-low"]);
+        yield* h.assertClosed;
       }),
   );
 

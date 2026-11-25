@@ -18,6 +18,7 @@ import { beginAcpMockPrompt } from "./acpMockCancellationState.ts";
 
 const requestLogPath = process.env.T3_ACP_REQUEST_LOG_PATH;
 const antigravityProfile = process.env.T3_ACP_ANTIGRAVITY === "1";
+const antigravityThinkingOnHigh = process.env.T3_ACP_ANTIGRAVITY_THINKING_ON_HIGH === "1";
 // GitHub Copilot CLI advertises URL-shaped session mode ids.
 const copilotModesProfile = process.env.T3_ACP_COPILOT_MODES === "1";
 const copilotModeId = (name: string) =>
@@ -177,6 +178,23 @@ function configOptions(): ReadonlyArray<AcpSchema.SessionConfigOption> {
         currentValue: currentModeId,
         options: availableModes.map((mode) => ({ value: mode.id, name: mode.name })),
       },
+      ...(antigravityThinkingOnHigh && currentModelId === "gemini-test-high"
+        ? [
+            {
+              configId: "thought_level",
+              name: "Thinking Level",
+              category: "thought_level",
+              type: "select" as const,
+              currentValue: "high",
+              options: [
+                { value: "low", name: "Low" },
+                { value: "medium", name: "Medium" },
+                { value: "high", name: "High" },
+                { value: "xhigh", name: "Extra" },
+              ],
+            },
+          ]
+        : []),
     ];
   }
   if (parameterizedModelPicker) {
