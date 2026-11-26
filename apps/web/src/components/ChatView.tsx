@@ -307,6 +307,7 @@ import {
 import { useEnvironmentShellHasSnapshot } from "../state/shell";
 import { ChatComposer, type ChatComposerHandle } from "./chat/ChatComposer";
 import { DraftHeroHeadline } from "./chat/DraftHeroHeadline";
+import { DraftHeroOverviewCard } from "./chat/DraftHeroOverviewCard";
 import { ExpandedImageDialogHost, openExpandedImagePreview } from "./chat/ExpandedImageDialog";
 import {
   BranchRestoreConfirmHost,
@@ -3788,35 +3789,39 @@ export default function ChatView(props: ChatViewProps) {
               }}
               inert={isRevertingCheckpoint}
               data-chat-composer-overlay="true"
-              className={
+              className={`scrollbar-gutter-both ${
                 isDraftHeroState
-                  ? "pointer-events-none absolute inset-0 z-20 flex items-center [@media(max-height:34rem)]:items-end"
+                  ? "pointer-events-auto absolute inset-0 z-20 flex flex-col overflow-y-auto pt-4 [@media(max-height:34rem)]:pt-0"
                   : "pointer-events-none absolute inset-x-0 bottom-0 z-20 pt-1.5 sm:pt-2"
-              }
+              }`}
             >
-              <div ref={draftHeroTransitionGroupRef} className="chat-composer-lane w-full">
+              {isDraftHeroState ? <div aria-hidden className="min-h-4 flex-1" /> : null}
+              {isDraftHeroState ? (
+                <div className="chat-composer-lane w-full shrink-0">
+                  <div className="mx-auto flex w-full max-w-(--chat-content-max-width) flex-col items-center gap-4 pb-4">
+                    <div
+                      className="w-full"
+                      style={
+                        forceExpandedMobileComposer
+                          ? { viewTransitionName: MOBILE_DRAFT_HEADLINE_VIEW_TRANSITION_NAME }
+                          : undefined
+                      }
+                    >
+                      <DraftHeroHeadline
+                        draftId={draftId}
+                        activeProjectRef={activeProjectRef}
+                        activeProjectTitle={activeProject?.title ?? null}
+                      />
+                    </div>
+                    {!embedded ? <DraftHeroOverviewCard draftId={draftId} /> : null}
+                  </div>
+                </div>
+              ) : null}
+              <div ref={draftHeroTransitionGroupRef} className="chat-composer-lane w-full shrink-0">
                 <div
                   data-chat-composer-stack="true"
                   className="group/composer-stack pointer-events-auto relative z-10 mx-auto w-full max-w-(--chat-content-max-width)"
                 >
-                  {isDraftHeroState ? (
-                    <div className="absolute inset-x-0 bottom-full">
-                      <div
-                        className="pb-4 group-has-data-[composer-shoulder-tab]/composer-stack:pb-0"
-                        style={
-                          forceExpandedMobileComposer
-                            ? { viewTransitionName: MOBILE_DRAFT_HEADLINE_VIEW_TRANSITION_NAME }
-                            : undefined
-                        }
-                      >
-                        <DraftHeroHeadline
-                          draftId={draftId}
-                          activeProjectRef={activeProjectRef}
-                          activeProjectTitle={activeProject?.title ?? null}
-                        />
-                      </div>
-                    </div>
-                  ) : null}
                   <div
                     ref={draftHeroComposerAnchorRef}
                     className="relative z-10"
@@ -4114,6 +4119,9 @@ export default function ChatView(props: ChatViewProps) {
                   </div>
                 </div>
               </div>
+              {isDraftHeroState ? (
+                <div aria-hidden className="min-h-4 flex-1 [@media(max-height:34rem)]:hidden" />
+              ) : null}
             </div>
 
             {canOperatePreview && activeThreadRef && activeEnvironmentServerBrowser && !embedded ? (

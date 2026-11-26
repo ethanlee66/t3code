@@ -1729,6 +1729,11 @@ export function createServerEnvironmentAtoms<R, E>(
         );
       },
     }),
+    workspaceUsageStats: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:server:workspace-usage-stats",
+      tag: WS_METHODS.serverGetWorkspaceUsageStats,
+      staleTimeMs: 30_000,
+    }),
     resourceTelemetry: createEnvironmentRpcSubscriptionAtomFamily(runtime, {
       label: "environment-data:server:resource-telemetry",
       tag: WS_METHODS.subscribeResourceTelemetry,
