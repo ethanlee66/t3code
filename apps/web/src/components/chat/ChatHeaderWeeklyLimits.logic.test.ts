@@ -26,7 +26,7 @@ const account = (
 });
 
 describe("weeklyLimitSummaries", () => {
-  it("keeps weekly windows per provider, skipping Antigravity's shared quota, and reports the tightest one", () => {
+  it("keeps weekly windows per provider and reports the tightest one", () => {
     const pools = collectLimitPools(
       [
         account("claudeAgent", [
@@ -35,10 +35,6 @@ describe("weeklyLimitSummaries", () => {
           { id: "seven_day_fable", kind: "weekly", usedPercent: 70 },
         ]),
         account("cursor", [{ id: "totalPercentUsed", kind: "monthly", usedPercent: 10 }]),
-        account("antigravity", [
-          { id: "gemini-weekly", kind: "weekly", usedPercent: 8 },
-          { id: "3p-weekly", kind: "weekly", usedPercent: 100 },
-        ]),
       ],
       now,
     );
@@ -51,7 +47,6 @@ describe("weeklyLimitSummaries", () => {
       })),
     ).toEqual([
       { driver: "claudeAgent", windows: ["seven_day", "seven_day_fable"], remainingPercent: 30 },
-      { driver: "antigravity", windows: ["gemini-weekly"], remainingPercent: 92 },
     ]);
   });
 });
