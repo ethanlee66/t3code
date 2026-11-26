@@ -1,6 +1,11 @@
 import * as Schema from "effect/Schema";
 
-import { ForwardCompatibleArray, NonNegativeInt, TrimmedNonEmptyString } from "./baseSchemas.ts";
+import {
+  ForwardCompatibleArray,
+  NonNegativeInt,
+  ProjectId,
+  TrimmedNonEmptyString,
+} from "./baseSchemas.ts";
 
 /** Bump for incompatible UsageSummary changes; skipped unknown array variants need no bump. */
 export const USAGE_CONTRACT_VERSION = 6 as const;
@@ -170,5 +175,73 @@ export class UsageReadError extends Schema.TaggedError<UsageReadError>()("UsageR
 }) {
   override get message(): string {
     return `Usage read failed (${this.reason}): ${this.detail}`;
+  }
+}
+
+export const WorkspaceUsageModelTotals = Schema.Struct({
+  driver: TrimmedNonEmptyString,
+  model: TrimmedNonEmptyString,
+  inputTokens: NonNegativeInt,
+  cachedInputTokens: NonNegativeInt,
+  cacheCreationTokens: NonNegativeInt,
+  cacheEligibleInputTokens: NonNegativeInt,
+  outputTokens: NonNegativeInt,
+  reasoningTokens: NonNegativeInt,
+  otherInputTokens: NonNegativeInt,
+  otherOutputTokens: NonNegativeInt,
+  totalTokens: NonNegativeInt,
+  turns: NonNegativeInt,
+  sessions: NonNegativeInt,
+});
+export type WorkspaceUsageModelTotals = typeof WorkspaceUsageModelTotals.Type;
+
+export const WorkspaceUsageDailyTotals = Schema.Struct({
+  day: UsageDay,
+  messages: NonNegativeInt,
+  turns: NonNegativeInt,
+  totalTokens: NonNegativeInt,
+});
+export type WorkspaceUsageDailyTotals = typeof WorkspaceUsageDailyTotals.Type;
+
+export const WorkspaceUsageStatsInput = Schema.Struct({
+  /** IANA bucketing zone; offsets fail across DST boundaries. */
+  timeZone: TrimmedNonEmptyString,
+  sinceDay: Schema.optional(UsageDay),
+  untilDay: Schema.optional(UsageDay),
+  projectIds: Schema.optional(Schema.Array(ProjectId)),
+});
+export type WorkspaceUsageStatsInput = typeof WorkspaceUsageStatsInput.Type;
+
+export const WorkspaceUsageStats = Schema.Struct({
+  readAt: Schema.String,
+  timeZone: TrimmedNonEmptyString,
+  sessions: NonNegativeInt,
+  messages: NonNegativeInt,
+  activeDays: NonNegativeInt,
+  inputTokens: NonNegativeInt,
+  cachedInputTokens: NonNegativeInt,
+  cacheCreationTokens: NonNegativeInt,
+  cacheEligibleInputTokens: NonNegativeInt,
+  outputTokens: NonNegativeInt,
+  reasoningTokens: NonNegativeInt,
+  otherInputTokens: NonNegativeInt,
+  otherOutputTokens: NonNegativeInt,
+  totalTokens: NonNegativeInt,
+  models: ForwardCompatibleArray(WorkspaceUsageModelTotals),
+  daily: ForwardCompatibleArray(WorkspaceUsageDailyTotals),
+});
+export type WorkspaceUsageStats = typeof WorkspaceUsageStats.Type;
+
+export class WorkspaceUsageReadError extends Schema.TaggedError<WorkspaceUsageReadError>()(
+  "WorkspaceUsageReadError",
+  {
+    reason: Schema.Literals(["queryFailed", "invalidWindow"]),
+    cause: Schema.optional(Schema.Defect()),
+  },
+) {
+  override get message(): string {
+    return this.reason === "invalidWindow"
+      ? "Workspace usage stats window is invalid."
+      : "Workspace usage stats query failed.";
   }
 }
